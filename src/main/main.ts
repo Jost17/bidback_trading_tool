@@ -19,7 +19,6 @@ function createWindow(): void {
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
-      enableRemoteModule: false,
       nodeIntegration: false,
       sandbox: false
     },
@@ -104,9 +103,9 @@ app.on('before-quit', () => {
 
 // Security: Prevent new window creation
 app.on('web-contents-created', (_, contents) => {
-  contents.on('new-window', (navigationEvent, navigationUrl) => {
-    navigationEvent.preventDefault()
-    console.warn('Blocked new window creation:', navigationUrl)
+  contents.setWindowOpenHandler(({ url }) => {
+    console.warn('Blocked new window creation:', url)
+    return { action: 'deny' }
   })
 })
 

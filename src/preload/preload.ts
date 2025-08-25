@@ -51,6 +51,69 @@ contextBridge.exposeInMainWorld('tradingAPI', {
   getDatabaseInfo: () => 
     ipcRenderer.invoke('trading:get-database-info'),
 
+  // Enhanced Breadth Calculator API - Calculation Methods
+  calculateBreadthSingle: (request: any) => 
+    ipcRenderer.invoke('breadth-calculator:calculate-single', request),
+  
+  calculateBreadthBulk: (request: any) => 
+    ipcRenderer.invoke('breadth-calculator:calculate-bulk', request),
+  
+  calculateBreadthRealtime: (algorithm?: string) => 
+    ipcRenderer.invoke('breadth-calculator:calculate-realtime', algorithm),
+  
+  calculateBreadthFromDatabase: (startDate?: string, endDate?: string, algorithm?: string) => 
+    ipcRenderer.invoke('breadth-calculator:calculate-from-database', startDate, endDate, algorithm),
+
+  // Algorithm Management
+  getBreadthAlgorithms: () => 
+    ipcRenderer.invoke('breadth-calculator:get-algorithms'),
+  
+  switchBreadthAlgorithm: (algorithm: string, customConfig?: any) => 
+    ipcRenderer.invoke('breadth-calculator:switch-algorithm', algorithm, customConfig),
+  
+  getCurrentBreadthConfig: () => 
+    ipcRenderer.invoke('breadth-calculator:get-current-config'),
+
+  // Configuration Management
+  createBreadthConfig: (request: any) => 
+    ipcRenderer.invoke('breadth-calculator:create-config', request),
+  
+  getBreadthConfig: (version: string) => 
+    ipcRenderer.invoke('breadth-calculator:get-config', version),
+  
+  listBreadthConfigs: (activeOnly: boolean = true) => 
+    ipcRenderer.invoke('breadth-calculator:list-configs', activeOnly),
+  
+  updateBreadthConfig: (version: string, updates: any) => 
+    ipcRenderer.invoke('breadth-calculator:update-config', version, updates),
+  
+  setDefaultBreadthConfig: (version: string) => 
+    ipcRenderer.invoke('breadth-calculator:set-default-config', version),
+
+  // Performance and Monitoring
+  getBreadthPerformanceMetrics: () => 
+    ipcRenderer.invoke('breadth-calculator:get-performance-metrics'),
+  
+  clearBreadthPerformanceMetrics: () => 
+    ipcRenderer.invoke('breadth-calculator:clear-performance-metrics'),
+
+  // Data Validation and Utilities
+  validateBreadthData: (data: any) => 
+    ipcRenderer.invoke('breadth-calculator:validate-data', data),
+  
+  exportBreadthConfigs: (versions?: string[]) => 
+    ipcRenderer.invoke('breadth-calculator:export-configs', versions),
+  
+  importBreadthConfigs: (configsJson: string) => 
+    ipcRenderer.invoke('breadth-calculator:import-configs', configsJson),
+  
+  breadthCalculatorHealthCheck: () => 
+    ipcRenderer.invoke('breadth-calculator:health-check'),
+
+  // Generic invoke method (for any additional custom calls)
+  invoke: (channel: string, ...args: any[]) => 
+    ipcRenderer.invoke(channel, ...args),
+
   // IB Integration API (future implementation)
   connectIB: () => 
     ipcRenderer.invoke('ib:connect'),

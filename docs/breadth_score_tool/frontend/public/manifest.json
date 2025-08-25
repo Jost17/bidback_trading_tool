@@ -1,0 +1,16 @@
+{
+  "name": "Breadth Score Monitor",
+  "short_name": "BreadthMonitor",
+  "description": "Market breadth analysis tool",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#ff8500",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "32x32",
+      "type": "image/svg+xml"
+    }
+  ]
+}

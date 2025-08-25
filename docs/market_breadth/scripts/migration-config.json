@@ -1,0 +1,120 @@
+{
+  "description": "Market Breadth CSV Migration Configuration",
+  "version": "1.0.0",
+  "defaultConfig": {
+    "batchSize": 1000,
+    "validateData": true,
+    "calculateRatios": true,
+    "backupOriginal": true,
+    "logLevel": "info",
+    "outputDir": "./data/migration"
+  },
+  "columnMappings": {
+    "standard": {
+      "description": "Standard format with full column names",
+      "mapping": {
+        "Date": "date",
+        "Stocks Up 4% Daily": "stocks_up_4pct_daily",
+        "Stocks Down 4% Daily": "stocks_down_4pct_daily",
+        "Stocks Up 25% Quarterly": "stocks_up_25pct_quarterly",
+        "Stocks Down 25% Quarterly": "stocks_down_25pct_quarterly",
+        "Stocks Up 20% Custom": "stocks_up_20pct_custom",
+        "Stocks Down 20% Custom": "stocks_down_20pct_custom",
+        "Stocks Up 25% Monthly": "stocks_up_25pct_monthly",
+        "Stocks Down 25% Monthly": "stocks_down_25pct_monthly",
+        "Stocks Up 50% Monthly": "stocks_up_50pct_monthly",
+        "Stocks Down 50% Monthly": "stocks_down_50pct_monthly",
+        "Stocks Up 13% in 34 Days": "stocks_up_13pct_34days",
+        "Stocks Down 13% in 34 Days": "stocks_down_13pct_34days",
+        "Stocks Up $20": "stocks_up_20dollar_custom",
+        "Stocks Down $20": "stocks_down_20dollar_custom",
+        "T2108": "t2108",
+        "Worden Common Stocks": "worden_common_stocks",
+        "S&P Reference": "sp_reference"
+      }
+    },
+    "short": {
+      "description": "Short format with abbreviated column names",
+      "mapping": {
+        "Date": "date",
+        "Up4D": "stocks_up_4pct_daily",
+        "Down4D": "stocks_down_4pct_daily",
+        "Up25Q": "stocks_up_25pct_quarterly",
+        "Down25Q": "stocks_down_25pct_quarterly",
+        "Up20": "stocks_up_20pct_custom",
+        "Down20": "stocks_down_20pct_custom",
+        "Up25M": "stocks_up_25pct_monthly",
+        "Down25M": "stocks_down_25pct_monthly",
+        "Up50M": "stocks_up_50pct_monthly",
+        "Down50M": "stocks_down_50pct_monthly",
+        "Up13_34": "stocks_up_13pct_34days",
+        "Down13_34": "stocks_down_13pct_34days",
+        "Up$20": "stocks_up_20dollar_custom",
+        "Down$20": "stocks_down_20dollar_custom",
+        "T2108": "t2108",
+        "Worden": "worden_common_stocks",
+        "SP500": "sp_reference"
+      }
+    },
+    "legacy": {
+      "description": "Legacy format with underscore-separated names",
+      "mapping": {
+        "DATE": "date",
+        "UP_4_PCT": "stocks_up_4pct_daily",
+        "DOWN_4_PCT": "stocks_down_4pct_daily",
+        "UP_25_QTR": "stocks_up_25pct_quarterly",
+        "DOWN_25_QTR": "stocks_down_25pct_quarterly",
+        "UP_25_MTH": "stocks_up_25pct_monthly",
+        "DOWN_25_MTH": "stocks_down_25pct_monthly",
+        "UP_50_MTH": "stocks_up_50pct_monthly",
+        "DOWN_50_MTH": "stocks_down_50pct_monthly",
+        "T2108_PCT": "t2108",
+        "WORDEN_CS": "worden_common_stocks",
+        "SP_REF": "sp_reference"
+      }
+    }
+  },
+  "validation": {
+    "dateFormats": [
+      "YYYY-MM-DD",
+      "MM/DD/YYYY",
+      "M/D/YYYY",
+      "YYYY/MM/DD",
+      "MM-DD-YYYY"
+    ],
+    "dateRange": {
+      "min": "2007-01-01",
+      "max": "2025-12-31"
+    },
+    "numericRanges": {
+      "t2108": {
+        "min": 0,
+        "max": 100,
+        "description": "T2108 percentage should be between 0-100"
+      },
+      "stockCounts": {
+        "min": 0,
+        "max": 10000,
+        "description": "Stock counts should be non-negative"
+      }
+    }
+  },
+  "ratioCalculation": {
+    "enabled": true,
+    "methods": {
+      "5day": {
+        "description": "5-day ratio of up vs down stocks",
+        "formula": "SUM(up_stocks_4pct[i-4:i]) / SUM(down_stocks_4pct[i-4:i])"
+      },
+      "10day": {
+        "description": "10-day ratio of up vs down stocks", 
+        "formula": "SUM(up_stocks_4pct[i-9:i]) / SUM(down_stocks_4pct[i-9:i])"
+      }
+    }
+  },
+  "examples": {
+    "standardFormat": "./data/examples/sample_market_breadth.csv",
+    "shortFormat": "./data/examples/short_format.csv",
+    "legacyFormat": "./data/examples/legacy_format.csv"
+  }
+}

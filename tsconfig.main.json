@@ -13,6 +13,7 @@
   "include": [
     "src/main",
     "src/database",
+    "src/services",
     "src/types"
   ],
   "exclude": [

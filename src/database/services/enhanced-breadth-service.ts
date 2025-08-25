@@ -5,29 +5,57 @@ import type {
   CSVImportResult,
   ChartDataPoint 
 } from '../../types/trading'
+import type { RawMarketBreadthData } from '../../types/breadth-raw-data'
 
-// Extended Breadth Data interface for all indicators
-export interface ExtendedBreadthData extends BreadthData {
-  // Primary Indicators
+// Use the centralized RawMarketBreadthData interface from breadth-raw-data.ts
+
+// Extended interface for backwards compatibility - using intersection to avoid conflicts
+export interface ExtendedBreadthData extends Omit<BreadthData, 'advancingIssues' | 'decliningIssues' | 'newHighs' | 'newLows' | 'upVolume' | 'downVolume'> {
+  // Core breadth indicators (optional to support both raw and calculated data)
+  advancingIssues?: number
+  decliningIssues?: number
+  newHighs?: number
+  newLows?: number
+  upVolume?: number
+  downVolume?: number
+
+  // Raw Market Breadth Data fields
   stocksUp4PctDaily?: number
   stocksDown4PctDaily?: number
   stocksUp25PctQuarterly?: number
   stocksDown25PctQuarterly?: number
-  ratio5Day?: number
-  ratio10Day?: number
-  
-  // Secondary Indicators
   stocksUp25PctMonthly?: number
   stocksDown25PctMonthly?: number
   stocksUp50PctMonthly?: number
   stocksDown50PctMonthly?: number
   stocksUp13Pct34Days?: number
   stocksDown13Pct34Days?: number
+  wordenUniverse?: number
+  t2108?: number
+  sp500Level?: string
   
-  // Overarching Indicators
-  t2108?: number // % Stocks above 40-day MA
-  wordenCommonStocks?: number
-  spReference?: number
+  // Sector Data (11 sectors - Raw Data)
+  basicMaterialsSector?: number
+  consumerCyclicalSector?: number
+  financialServicesSector?: number
+  realEstateSector?: number
+  consumerDefensiveSector?: number
+  healthcareSector?: number
+  utilitiesSector?: number
+  communicationServicesSector?: number
+  energySector?: number
+  industrialsSector?: number
+  technologySector?: number
+  
+  // Metadata
+  sourceFile?: string
+  importFormat?: 'stockbee_v1' | 'manual' | 'api' | 'legacy_migration'
+  dataQualityScore?: number
+
+  // Runtime calculated fields (NOT stored in database)
+  ratio5Day?: number
+  ratio10Day?: number
+  spReference?: number // Parsed numeric value of sp500Level
 }
 
 // Validation rules for market data
@@ -58,43 +86,62 @@ export class EnhancedBreadthService {
   }
 
   private initializeStatements(): void {
-    // Insert statement with all fields
+    // Insert statement for raw market breadth data (NO calculated fields)
     this.insertBreadthStmt = this.db.prepare(`
-      INSERT INTO market_breadth (
-        date, timestamp, advancing_issues, declining_issues,
-        new_highs, new_lows, up_volume, down_volume,
-        breadth_score, trend_strength, market_phase,
-        data_source, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO market_breadth_raw_data (
+        date, timestamp,
+        stocks_up_4pct_daily, stocks_down_4pct_daily,
+        stocks_up_25pct_quarterly, stocks_down_25pct_quarterly,
+        stocks_up_25pct_monthly, stocks_down_25pct_monthly,
+        stocks_up_50pct_monthly, stocks_down_50pct_monthly,
+        stocks_up_13pct_34days, stocks_down_13pct_34days,
+        worden_universe, t2108, sp500_level,
+        advancing_issues, declining_issues, new_highs, new_lows,
+        up_volume, down_volume,
+        basic_materials_sector, consumer_cyclical_sector,
+        financial_services_sector, real_estate_sector,
+        consumer_defensive_sector, healthcare_sector,
+        utilities_sector, communication_services_sector,
+        energy_sector, industrials_sector, technology_sector,
+        source_file, import_format, data_quality_score, notes
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+        ?, ?, ?, ?, ?, ?
+      )
     `)
 
-    // Get breadth data by date range
+    // Get raw breadth data by date range
     this.getBreadthByDateStmt = this.db.prepare(`
-      SELECT * FROM market_breadth 
+      SELECT * FROM market_breadth_raw_data 
       WHERE date BETWEEN ? AND ? 
       ORDER BY date DESC
     `)
 
-    // Update breadth data
+    // Update raw breadth data (raw fields only)
     this.updateBreadthStmt = this.db.prepare(`
-      UPDATE market_breadth SET
+      UPDATE market_breadth_raw_data SET
+        stocks_up_4pct_daily = ?, stocks_down_4pct_daily = ?,
+        stocks_up_25pct_quarterly = ?, stocks_down_25pct_quarterly = ?,
+        t2108 = ?, sp500_level = ?, worden_universe = ?,
         advancing_issues = ?, declining_issues = ?,
         new_highs = ?, new_lows = ?, up_volume = ?, down_volume = ?,
-        breadth_score = ?, trend_strength = ?, market_phase = ?,
         notes = ?, updated_at = CURRENT_TIMESTAMP
       WHERE date = ?
     `)
 
     // Get latest breadth entry
     this.getLatestBreadthStmt = this.db.prepare(`
-      SELECT * FROM market_breadth 
+      SELECT * FROM market_breadth_raw_data 
       ORDER BY date DESC 
       LIMIT 1
     `)
 
-    // Get previous N days for ratio calculations
+    // Get previous N days for runtime ratio calculations
     this.getPreviousDaysStmt = this.db.prepare(`
-      SELECT * FROM market_breadth 
+      SELECT date, stocks_up_4pct_daily, stocks_down_4pct_daily,
+             advancing_issues, declining_issues
+      FROM market_breadth_raw_data 
       WHERE date < ? 
       ORDER BY date DESC 
       LIMIT ?
@@ -102,39 +149,83 @@ export class EnhancedBreadthService {
   }
 
   private ensureExtendedSchema(): void {
-    // Add extended columns if they don't exist
-    const columns = [
-      'stocks_up_4pct_daily INTEGER',
-      'stocks_down_4pct_daily INTEGER',
-      'stocks_up_25pct_quarterly INTEGER',
-      'stocks_down_25pct_quarterly INTEGER',
-      'ratio_5day REAL',
-      'ratio_10day REAL',
-      'stocks_up_25pct_monthly INTEGER',
-      'stocks_down_25pct_monthly INTEGER',
-      'stocks_up_50pct_monthly INTEGER',
-      'stocks_down_50pct_monthly INTEGER',
-      'stocks_up_13pct_34days INTEGER',
-      'stocks_down_13pct_34days INTEGER',
-      't2108 REAL',
-      'worden_common_stocks INTEGER',
-      'sp_reference REAL'
-    ]
-
-    columns.forEach(column => {
-      const [name, type] = column.split(' ')
-      try {
-        this.db.exec(`ALTER TABLE market_breadth ADD COLUMN ${name} ${type}`)
-      } catch (error) {
-        // Column already exists, ignore
+    // Check if the new raw data table exists, if not create it
+    try {
+      const tableExists = this.db.prepare(`
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name='market_breadth_raw_data'
+      `).get()
+      
+      if (!tableExists) {
+        console.log('Creating market_breadth_raw_data table...')
+        // Read and execute the raw schema SQL file
+        const fs = require('fs')
+        const path = require('path')
+        const schemaPath = path.join(__dirname, '../schemas/market-breadth-raw-schema.sql')
+        
+        try {
+          const schemaSql = fs.readFileSync(schemaPath, 'utf8')
+          this.db.exec(schemaSql)
+          console.log('✅ Raw market breadth schema created successfully')
+        } catch (error) {
+          console.error('❌ Failed to create raw schema from file, creating minimal version:', error)
+          // Fallback: create basic table structure
+          this.createBasicRawTable()
+        }
+      } else {
+        console.log('✅ market_breadth_raw_data table already exists')
       }
-    })
+    } catch (error) {
+      console.error('Error checking/creating raw data schema:', error)
+      this.createBasicRawTable()
+    }
+  }
+
+  private createBasicRawTable(): void {
+    // Fallback table creation if schema file is not available
+    const createTableSql = `
+      CREATE TABLE IF NOT EXISTS market_breadth_raw_data (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL UNIQUE,
+        timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+        stocks_up_4pct_daily INTEGER,
+        stocks_down_4pct_daily INTEGER,
+        stocks_up_25pct_quarterly INTEGER,
+        stocks_down_25pct_quarterly INTEGER,
+        stocks_up_25pct_monthly INTEGER,
+        stocks_down_25pct_monthly INTEGER,
+        stocks_up_50pct_monthly INTEGER,
+        stocks_down_50pct_monthly INTEGER,
+        stocks_up_13pct_34days INTEGER,
+        stocks_down_13pct_34days INTEGER,
+        worden_universe INTEGER,
+        t2108 REAL,
+        sp500_level TEXT,
+        advancing_issues INTEGER,
+        declining_issues INTEGER,
+        new_highs INTEGER,
+        new_lows INTEGER,
+        up_volume REAL,
+        down_volume REAL,
+        source_file TEXT,
+        import_format TEXT DEFAULT 'manual',
+        data_quality_score REAL DEFAULT 100,
+        notes TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_breadth_raw_date ON market_breadth_raw_data(date);
+    `
+    
+    this.db.exec(createTableSql)
+    console.log('✅ Basic raw data table created as fallback')
   }
 
   /**
    * Calculate 5-day ratio from historical data
    */
-  calculate5DayRatio(currentData: ExtendedBreadthData): number | null {
+  calculate5DayRatio(currentData: RawMarketBreadthData | ExtendedBreadthData): number | null {
     const previousDays = this.getPreviousDaysStmt.all(currentData.date, 4) as any[]
     
     if (previousDays.length < 4) return null
@@ -158,7 +249,7 @@ export class EnhancedBreadthService {
   /**
    * Calculate 10-day ratio from historical data
    */
-  calculate10DayRatio(currentData: ExtendedBreadthData): number | null {
+  calculate10DayRatio(currentData: RawMarketBreadthData | ExtendedBreadthData): number | null {
     const previousDays = this.getPreviousDaysStmt.all(currentData.date, 9) as any[]
     
     if (previousDays.length < 9) return null
@@ -182,7 +273,7 @@ export class EnhancedBreadthService {
   /**
    * Enhanced 6-Factor Breadth Score Calculation
    */
-  calculateEnhanced6FactorScore(data: ExtendedBreadthData): BreadthCalculation {
+  calculateEnhanced6FactorScore(data: RawMarketBreadthData | ExtendedBreadthData): BreadthCalculation {
     const {
       advancingIssues = 0,
       decliningIssues = 0,
@@ -253,12 +344,12 @@ export class EnhancedBreadthService {
   /**
    * Validate market data input
    */
-  validateMarketData(data: ExtendedBreadthData): { valid: boolean; errors: string[] } {
+  validateMarketData(data: RawMarketBreadthData | ExtendedBreadthData): { valid: boolean; errors: string[] } {
     const errors: string[] = []
 
     // Check required fields
     VALIDATION_RULES.REQUIRED_FIELDS.forEach(field => {
-      if (!data[field as keyof ExtendedBreadthData]) {
+      if (!data[field as keyof (RawMarketBreadthData | ExtendedBreadthData)]) {
         errors.push(`${field} is required`)
       }
     })
@@ -270,7 +361,7 @@ export class EnhancedBreadthService {
 
     // Validate numeric fields
     VALIDATION_RULES.NUMERIC_FIELDS.forEach(field => {
-      const value = data[field as keyof ExtendedBreadthData]
+      const value = data[field as keyof (RawMarketBreadthData | ExtendedBreadthData)]
       if (value !== undefined && value !== null) {
         const numValue = Number(value)
         if (isNaN(numValue) || numValue < 0) {
@@ -286,84 +377,97 @@ export class EnhancedBreadthService {
   }
 
   /**
-   * Save or update breadth data with all calculations
+   * Save or update RAW breadth data (NO calculated fields stored)
    */
-  async saveBreadthData(data: ExtendedBreadthData): Promise<number> {
+  async saveRawBreadthData(data: RawMarketBreadthData): Promise<number> {
     // Validate data
     const validation = this.validateMarketData(data)
     if (!validation.valid) {
       throw new Error(`Validation failed: ${validation.errors.join(', ')}`)
     }
 
-    // Calculate ratios
-    const ratio5Day = this.calculate5DayRatio(data)
-    const ratio10Day = this.calculate10DayRatio(data)
-    
-    // Calculate enhanced 6-factor score
-    const calculation = this.calculateEnhanced6FactorScore({
-      ...data,
-      ratio5Day: ratio5Day || undefined
-    })
+    // Parse S&P 500 level for internal use (but store as text)
+    let spReference: number | undefined
+    if (data.sp500Level) {
+      const cleaned = data.sp500Level.replace(/[",]/g, '')
+      spReference = parseFloat(cleaned)
+    }
 
     // Check if entry exists for this date
-    const existing = this.db.prepare('SELECT id FROM market_breadth WHERE date = ?').get(data.date)
+    const existing = this.db.prepare('SELECT id FROM market_breadth_raw_data WHERE date = ?').get(data.date)
 
     if (existing) {
-      // Update existing entry
+      // Update existing entry with RAW DATA ONLY
       this.updateBreadthStmt.run(
-        data.advancingIssues,
-        data.decliningIssues,
-        data.newHighs,
-        data.newLows,
-        data.upVolume,
-        data.downVolume,
-        calculation.breadthScore,
-        calculation.trendStrength,
-        calculation.marketPhase,
+        data.stocksUp4PctDaily || null,
+        data.stocksDown4PctDaily || null,
+        data.stocksUp25PctQuarterly || null,
+        data.stocksDown25PctQuarterly || null,
+        data.t2108 || null,
+        data.sp500Level || null,
+        data.wordenUniverse || null,
+        data.advancingIssues || null,
+        data.decliningIssues || null,
+        data.newHighs || null,
+        data.newLows || null,
+        data.upVolume || null,
+        data.downVolume || null,
         data.notes || null,
         data.date
       )
       return (existing as any).id
     } else {
-      // Insert new entry
+      // Insert new entry with RAW DATA ONLY
       const info = this.insertBreadthStmt.run(
         data.date,
         data.timestamp || new Date().toISOString(),
-        data.advancingIssues,
-        data.decliningIssues,
-        data.newHighs,
-        data.newLows,
-        data.upVolume,
-        data.downVolume,
-        calculation.breadthScore,
-        calculation.trendStrength,
-        calculation.marketPhase,
-        data.dataSource || 'manual',
+        data.stocksUp4PctDaily || null,
+        data.stocksDown4PctDaily || null,
+        data.stocksUp25PctQuarterly || null,
+        data.stocksDown25PctQuarterly || null,
+        data.stocksUp25PctMonthly || null,
+        data.stocksDown25PctMonthly || null,
+        data.stocksUp50PctMonthly || null,
+        data.stocksDown50PctMonthly || null,
+        data.stocksUp13Pct34Days || null,
+        data.stocksDown13Pct34Days || null,
+        data.wordenUniverse || null,
+        data.t2108 || null,
+        data.sp500Level || null,
+        data.advancingIssues || null,
+        data.decliningIssues || null,
+        data.newHighs || null,
+        data.newLows || null,
+        data.upVolume || null,
+        data.downVolume || null,
+        data.basicMaterialsSector || null,
+        data.consumerCyclicalSector || null,
+        data.financialServicesSector || null,
+        data.realEstateSector || null,
+        data.consumerDefensiveSector || null,
+        data.healthcareSector || null,
+        data.utilitiesSector || null,
+        data.communicationServicesSector || null,
+        data.energySector || null,
+        data.industrialsSector || null,
+        data.technologySector || null,
+        data.sourceFile || null,
+        data.importFormat || 'manual',
+        data.dataQualityScore || 100,
         data.notes || null
       )
       
-      // Update extended fields if provided
-      if (ratio5Day !== null || ratio10Day !== null || data.stocksUp4PctDaily) {
-        this.db.prepare(`
-          UPDATE market_breadth SET
-            stocks_up_4pct_daily = ?,
-            stocks_down_4pct_daily = ?,
-            ratio_5day = ?,
-            ratio_10day = ?,
-            t2108 = ?
-          WHERE id = ?
-        `).run(
-          data.stocksUp4PctDaily || null,
-          data.stocksDown4PctDaily || null,
-          ratio5Day,
-          ratio10Day,
-          data.t2108 || null,
-          info.lastInsertRowid
-        )
-      }
-      
       return Number(info.lastInsertRowid)
     }
+  }
+
+  /**
+   * Legacy method for backwards compatibility
+   * @deprecated Use saveRawBreadthData instead
+   */
+  async saveBreadthData(data: ExtendedBreadthData): Promise<number> {
+    console.warn('saveBreadthData is deprecated, use saveRawBreadthData instead')
+    return this.saveRawBreadthData(data)
   }
 
   /**
@@ -386,17 +490,21 @@ export class EnhancedBreadthService {
     for (let i = 0; i < dataLines.length; i++) {
       try {
         const values = dataLines[i].split(',').map(v => v.trim())
-        const data: ExtendedBreadthData = this.mapCSVRowToData(values, fieldMapping, header)
+        const data: RawMarketBreadthData = this.mapCSVRowToData(values, fieldMapping, header)
+        
+        // Set source file for tracking
+        data.sourceFile = `csv_import_${format}_${new Date().getTime()}`
+        data.importFormat = format === 'stockbee' ? 'stockbee_v1' : 'manual'
         
         // Check for duplicate
-        const existing = this.db.prepare('SELECT id FROM market_breadth WHERE date = ?').get(data.date)
+        const existing = this.db.prepare('SELECT id FROM market_breadth_raw_data WHERE date = ?').get(data.date)
         if (existing) {
           duplicates.push(data.date)
           skippedCount++
           continue
         }
 
-        await this.saveBreadthData(data)
+        await this.saveRawBreadthData(data)
         importedCount++
 
       } catch (error) {
@@ -422,23 +530,43 @@ export class EnhancedBreadthService {
     const mapping = new Map<string, number>()
     
     if (format === 'stockbee') {
-      // Stockbee Market Monitor format
+      // Stockbee Market Monitor format - Raw CSV field mapping
       const stockbeeFields: Record<string, string[]> = {
         'date': ['date'],
-        'advancingIssues': ['stocks up 4% on day', 'advancing'],
-        'decliningIssues': ['stocks down 4% on day', 'declining'],
+        // Primary Breadth Indicators
+        'stocksUp4PctDaily': ['number of stocks up 4% plus today'],
+        'stocksDown4PctDaily': ['number of stocks down 4% plus today'],
+        'stocksUp25PctQuarterly': ['number of stocks up 25% plus in a quarter'],
+        'stocksDown25PctQuarterly': ['number of stocks down 25% + in a quarter'],
+        
+        // Secondary Breadth Indicators
+        'stocksUp25PctMonthly': ['number of stocks up 25% + in a month'],
+        'stocksDown25PctMonthly': ['number of stocks down 25% + in a month'],
+        'stocksUp50PctMonthly': ['number of stocks up 50% + in a month'],
+        'stocksDown50PctMonthly': ['number of stocks down 50% + in a month'],
+        'stocksUp13Pct34Days': ['number of stocks up 13% + in 34 days'],
+        'stocksDown13Pct34Days': ['number of stocks down 13% + in 34 days'],
+        
+        // Reference Data
+        'wordenUniverse': ['worden common stock universe'],
+        't2108': ['t2108'],
+        'sp500Level': ['s&p'],
+        
+        // Legacy fields for backwards compatibility
+        'advancingIssues': ['advancing', 'advancing issues'],
+        'decliningIssues': ['declining', 'declining issues'],
         'newHighs': ['new highs', 'newhighs'],
         'newLows': ['new lows', 'newlows'],
         'upVolume': ['up volume', 'upvolume'],
-        'downVolume': ['down volume', 'downvolume'],
-        'stocksUp4PctDaily': ['stocks up 4% on day'],
-        'stocksDown4PctDaily': ['stocks down 4% on day'],
-        't2108': ['t2108', '% stocks above 40ma']
+        'downVolume': ['down volume', 'downvolume']
       }
       
+      // Map headers to fields (case insensitive)
       for (const [field, variations] of Object.entries(stockbeeFields)) {
         for (const variant of variations) {
-          const index = headers.indexOf(variant)
+          const index = headers.findIndex(h => 
+            h.toLowerCase().trim() === variant.toLowerCase()
+          )
           if (index !== -1) {
             mapping.set(field, index)
             break
@@ -457,30 +585,27 @@ export class EnhancedBreadthService {
   }
 
   /**
-   * Map CSV row to ExtendedBreadthData
+   * Map CSV row to RawMarketBreadthData (Stockbee format)
    */
-  private mapCSVRowToData(values: string[], mapping: Map<string, number>, headers: string[]): ExtendedBreadthData {
-    const data: ExtendedBreadthData = {
+  private mapCSVRowToData(values: string[], mapping: Map<string, number>, headers: string[]): RawMarketBreadthData {
+    const data: RawMarketBreadthData = {
       date: '',
       timestamp: new Date().toISOString(),
-      advancingIssues: 0,
-      decliningIssues: 0,
-      newHighs: 0,
-      newLows: 0,
-      upVolume: 0,
-      downVolume: 0,
-      breadthScore: 0,
-      dataSource: 'imported'
+      importFormat: 'stockbee_v1'
     }
 
-    // Map values based on field mapping
+    // Map values based on field mapping with Stockbee CSV structure
     mapping.forEach((index, field) => {
       if (index < values.length) {
-        const value = values[index]
+        const value = values[index].trim()
+        
         if (field === 'date') {
           data.date = this.parseDate(value)
+        } else if (field === 'sp500Level') {
+          data.sp500Level = value // Keep as text with comma formatting
         } else if (VALIDATION_RULES.NUMERIC_FIELDS.includes(field)) {
-          (data as any)[field] = parseFloat(value) || 0
+          const numValue = parseFloat(value.replace(/,/g, '')) || 0;
+          (data as any)[field] = numValue
         } else {
           (data as any)[field] = value
         }
@@ -491,6 +616,14 @@ export class EnhancedBreadthService {
     if (!data.date && values[0]) {
       data.date = this.parseDate(values[0])
     }
+
+    // Set data quality based on completeness
+    const fieldCount = Object.keys(data).filter(key => 
+      data[key as keyof RawMarketBreadthData] !== undefined && 
+      data[key as keyof RawMarketBreadthData] !== null
+    ).length
+    
+    data.dataQualityScore = Math.min(100, (fieldCount / 15) * 100) // 15 expected fields
 
     return data
   }
@@ -523,6 +656,7 @@ export class EnhancedBreadthService {
     
     return data.map(row => ({
       date: row.date,
+      value: row.breadth_score || 0, // Required field for ChartDataPoint
       breadthScore: row.breadth_score,
       trendStrength: row.trend_strength,
       volume: row.up_volume + row.down_volume,

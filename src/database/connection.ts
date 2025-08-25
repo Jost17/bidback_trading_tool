@@ -331,4 +331,77 @@ export class TradingDatabase {
       console.log(`Migration ${version} already applied, skipping`)
     }
   }
+
+  // Run Market Breadth v2 Migration
+  public migrateToRawDataSchema(): void {
+    console.log('🔄 Starting Market Breadth Raw Data Schema Migration...')
+    
+    // Check if migration is needed
+    const rawTableExists = this.db.prepare(`
+      SELECT name FROM sqlite_master 
+      WHERE type='table' AND name='market_breadth_raw_data'
+    `).get()
+    
+    if (rawTableExists) {
+      console.log('✅ Raw data table already exists, migration not needed')
+      return
+    }
+
+    // Read and execute raw schema
+    const fs = require('fs')
+    const path = require('path')
+    
+    try {
+      const schemaPath = path.join(__dirname, 'schemas/market-breadth-raw-schema.sql')
+      const schemaSql = fs.readFileSync(schemaPath, 'utf8')
+      
+      this.db.transaction(() => {
+        // Execute raw schema
+        this.db.exec(schemaSql)
+        
+        // Migrate existing data if market_breadth table exists
+        const legacyTableExists = this.db.prepare(`
+          SELECT name FROM sqlite_master 
+          WHERE type='table' AND name='market_breadth'
+        `).get()
+        
+        if (legacyTableExists) {
+          console.log('🔄 Migrating existing market_breadth data...')
+          
+          this.db.exec(`
+            INSERT INTO market_breadth_raw_data (
+              date, timestamp, advancing_issues, declining_issues,
+              new_highs, new_lows, up_volume, down_volume,
+              import_format, source_file, notes, created_at, updated_at
+            )
+            SELECT 
+              date, 
+              COALESCE(timestamp, datetime('now')),
+              advancing_issues, declining_issues,
+              new_highs, new_lows,
+              up_volume, down_volume,
+              'legacy_migration' as import_format,
+              'market_breadth_legacy' as source_file,
+              notes,
+              COALESCE(created_at, CURRENT_TIMESTAMP),
+              COALESCE(updated_at, CURRENT_TIMESTAMP)
+            FROM market_breadth 
+            WHERE date IS NOT NULL
+            ORDER BY date
+          `)
+          
+          // Rename old table for backup
+          this.db.exec('ALTER TABLE market_breadth RENAME TO market_breadth_legacy')
+          
+          console.log('✅ Data migration completed successfully')
+        }
+      })()
+      
+      console.log('✅ Market Breadth Raw Data Schema Migration completed')
+      
+    } catch (error) {
+      console.error('❌ Migration failed:', error)
+      throw error
+    }
+  }
 }

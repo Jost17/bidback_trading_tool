@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { MarketBreadthDashboard } from './components/market-breadth/MarketBreadthDashboard'
 
 type ActiveModule = 'dashboard' | 'market-breadth' | 'trade-journal' | 'ib-integration'
 
@@ -130,7 +131,7 @@ export default function TempApp() {
 
         {/* Module Views */}
         {activeModule === 'market-breadth' && (
-          <MarketBreadthModule onBack={() => setActiveModule('dashboard')} />
+          <MarketBreadthDashboard onBack={() => setActiveModule('dashboard')} />
         )}
         
         {activeModule === 'trade-journal' && (
@@ -145,68 +146,6 @@ export default function TempApp() {
   )
 }
 
-// Market Breadth Module Component
-function MarketBreadthModule({ onBack }: { onBack: () => void }) {
-  return (
-    <div>
-      <div className="flex items-center mb-6">
-        <button 
-          onClick={onBack}
-          className="mr-4 px-3 py-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
-        >
-          ← Back to Dashboard
-        </button>
-        <h1 className="text-3xl font-bold text-gray-900">Market Breadth Analysis</h1>
-      </div>
-      
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">6-Factor Breadth Score Calculator</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="font-medium text-gray-700 mb-3">Current Market Metrics</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>NYSE Advance/Decline:</span>
-                <span className="font-semibold text-green-600">2.3</span>
-              </div>
-              <div className="flex justify-between">
-                <span>High/Low Ratio:</span>
-                <span className="font-semibold text-blue-600">1.8</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Up/Down Volume:</span>
-                <span className="font-semibold text-green-600">1.9</span>
-              </div>
-            </div>
-          </div>
-          <div>
-            <h3 className="font-medium text-gray-700 mb-3">Breadth Indicators</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>McClellan Oscillator:</span>
-                <span className="font-semibold text-green-600">+45</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Arms Index (TRIN):</span>
-                <span className="font-semibold text-yellow-600">0.85</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Overall Score:</span>
-                <span className="font-semibold text-green-600">75/100</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <p className="text-blue-800">
-            <strong>Market Phase: BULL</strong> - Strong breadth indicators suggest continued upward momentum. 
-            Consider maintaining long positions with proper risk management.
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 // Trade Journal Module Component
 function TradeJournalModule({ onBack }: { onBack: () => void }) {
