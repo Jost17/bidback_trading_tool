@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/components/*": ["./src/renderer/components/*"],
+      "@/lib/*": ["./src/renderer/lib/*"],
+      "@/types/*": ["./src/types/*"],
+      "@/database/*": ["./src/database/*"]
+    }
+  },
+  "include": [
+    "src/renderer",
+    "src/types"
+  ],
+  "references": [
+    { "path": "./tsconfig.main.json" }
+  ]
+}
