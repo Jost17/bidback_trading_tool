@@ -2,13 +2,13 @@ import Database from 'better-sqlite3'
 import type { Trade, TradeFilters, PerformanceStats, AccountSnapshot } from '../../types/trading'
 
 export class TradeService {
-  private insertTrade: Database.Statement
-  private updateTradeById: Database.Statement
-  private deleteTradeById: Database.Statement
-  private getTradeById: Database.Statement
-  private updateAccountSnapshot: Database.Statement
-  private insertAccountSnapshot: Database.Statement
-  private saveTradeWithAccount: Database.Transaction
+  private insertTrade!: Database.Statement
+  private updateTradeById!: Database.Statement
+  private deleteTradeById!: Database.Statement
+  private getTradeById!: Database.Statement
+  private updateAccountSnapshot!: Database.Statement
+  private insertAccountSnapshot!: Database.Statement
+  private saveTradeWithAccount!: Database.Transaction
 
   constructor(private db: Database.Database) {
     // Prepared statements
@@ -48,7 +48,7 @@ export class TradeService {
     `)
 
     // Transaction for atomic trade + account updates
-    this.saveTradeWithAccount = db.transaction((trade: Trade) => {
+    this.saveTradeWithAccount = db.transaction((trade: Trade): number => {
       // Calculate P&L if exit price is provided
       let grossPnl = trade.grossPnl
       let netPnl = trade.netPnl
@@ -116,7 +116,7 @@ export class TradeService {
   }
 
   saveCompleteTradeEntry(trade: Trade): number {
-    return this.saveTradeWithAccount(trade)
+    return this.saveTradeWithAccount(trade) as number
   }
 
   getTrades(filters?: TradeFilters): Trade[] {

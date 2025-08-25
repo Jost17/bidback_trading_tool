@@ -98,9 +98,7 @@ export default {
     },
   },
   plugins: [
-    // Add form plugin for better form styling
-    require('@tailwindcss/forms')({
-      strategy: 'class', // Use class-based strategy
-    }),
+    // Form styling plugins can be added here when needed
+    // Note: @tailwindcss/forms plugin not currently installed
   ],
 }

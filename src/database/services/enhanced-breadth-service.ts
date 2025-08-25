@@ -44,12 +44,12 @@ const VALIDATION_RULES = {
 export class EnhancedBreadthService {
   private db: Database.Database
   
-  // Prepared statements for performance
-  private insertBreadthStmt: Database.Statement
-  private getBreadthByDateStmt: Database.Statement
-  private updateBreadthStmt: Database.Statement
-  private getLatestBreadthStmt: Database.Statement
-  private getPreviousDaysStmt: Database.Statement
+  // Prepared statements for performance (initialized in constructor)
+  private insertBreadthStmt!: Database.Statement
+  private getBreadthByDateStmt!: Database.Statement
+  private updateBreadthStmt!: Database.Statement
+  private getLatestBreadthStmt!: Database.Statement
+  private getPreviousDaysStmt!: Database.Statement
 
   constructor(db: Database.Database) {
     this.db = db

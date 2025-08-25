@@ -215,7 +215,7 @@ export class TradingDatabase {
     console.log('Database indices created successfully')
   }
 
-  public createBackup(): { success: boolean; filename: string; path: string; size: number; timestamp: string } {
+  public async createBackup(): Promise<{ success: boolean; filename: string; path: string; size: number; timestamp: string }> {
     try {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
       const backupFilename = `trading-backup-${timestamp}.db`
@@ -226,8 +226,19 @@ export class TradingDatabase {
       
       // Create backup using SQLite backup API
       const backup = this.db.backup(backupPath)
-      backup.step()
-      backup.close()
+      
+      // Handle backup operation properly
+      if (backup && typeof backup === 'object' && 'then' in backup) {
+        // If backup returns a Promise, await it
+        await backup
+      } else {
+        // If backup returns a backup object synchronously, use step and close
+        const backupObj = backup as any
+        if (backupObj.step && backupObj.close) {
+          backupObj.step(-1) // -1 copies all pages at once
+          backupObj.close()
+        }
+      }
       
       const stats = fs.statSync(backupPath)
       

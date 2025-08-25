@@ -7,7 +7,8 @@
     "noEmit": false,
     "outDir": "dist/main",
     "jsx": "preserve",
-    "allowJs": false
+    "allowJs": false,
+    "composite": true
   },
   "include": [
     "src/main",
