@@ -206,7 +206,7 @@ export class BreadthService {
 
   importFromCSV(csvData: string): CSVImportResult {
     const lines = csvData.split('\n').filter(line => line.trim())
-    const header = lines[0]
+    const headers = lines[0].split(',').map(h => h.trim())
     const dataLines = lines.slice(1)
 
     let importedCount = 0
@@ -215,39 +215,102 @@ export class BreadthService {
     const errors: string[] = []
     const duplicates: string[] = []
 
+    // Auto-detect format
+    const isStockbeeFormat = headers.some(h => 
+      h.toLowerCase().includes('stocks up 4%') || 
+      h.toLowerCase().includes('t2108') ||
+      h.toLowerCase().includes('primary breadth')
+    )
+
+    // Skip first line if it's a category header (like "Primary Breadth Indicators")
+    let startIndex = 0
+    if (headers[0] === '' && headers[1] && headers[1].toLowerCase().includes('primary')) {
+      // This is a category header line, skip it and use the next line for headers
+      if (dataLines.length > 0) {
+        const realHeaders = dataLines[0].split(',').map(h => h.trim())
+        dataLines.splice(0, 1) // Remove the header line from data
+        headers.splice(0, headers.length, ...realHeaders) // Replace headers
+      }
+    }
+
     for (let i = 0; i < dataLines.length; i++) {
       try {
         const line = dataLines[i]
-        const values = line.split(',').map(v => v.trim())
+        const values = line.split(',').map(v => v.trim().replace(/"/g, ''))
         
-        // Expected format: Date, AdvancingIssues, DecliningIssues, NewHighs, NewLows, UpVolume, DownVolume
-        if (values.length < 7) {
-          errors.push(`Row ${i + 2}: Insufficient columns`)
-          errorCount++
-          continue
+        if (values.length < 2) {
+          continue // Skip empty or incomplete lines
         }
 
-        const [date, advIssues, decIssues, newHighs, newLows, upVol, downVol, ...rest] = values
-        
-        // Validate and parse data
-        const breadthData: BreadthData = {
-          date: date,
-          timestamp: new Date(date + 'T16:00:00').toISOString(), // Market close time
-          advancingIssues: parseInt(advIssues) || 0,
-          decliningIssues: parseInt(decIssues) || 0,
-          newHighs: parseInt(newHighs) || 0,
-          newLows: parseInt(newLows) || 0,
-          upVolume: parseFloat(upVol) || 0,
-          downVolume: parseFloat(downVol) || 0,
-          breadthScore: 0, // Will be calculated
-          dataSource: 'imported',
-          notes: rest.length > 0 ? rest.join(', ') : undefined
+        let breadthData: BreadthData
+
+        if (isStockbeeFormat) {
+          // Stockbee Market Monitor Format
+          // Expected: Date, up4%, down4%, 5day, 10day, up25%quarter, down25%quarter, up25%month, down25%month, up50%month, down50%month, up13%34day, down13%34day, worden, T2108, S&P
+          
+          const [
+            date, up4pct, down4pct, ratio5day, ratio10day,
+            up25quarter, down25quarter, up25month, down25month,
+            up50month, down50month, up13day34, down13day34,
+            worden, t2108, sp500, ...rest
+          ] = values
+
+          // Parse date (handle MM/DD/YYYY format)
+          let parsedDate = date
+          if (date.includes('/')) {
+            const [month, day, year] = date.split('/')
+            parsedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+          }
+
+          breadthData = {
+            date: parsedDate,
+            timestamp: new Date(parsedDate + 'T16:00:00').toISOString(),
+            // Map Stockbee data to our breadth model
+            advancingIssues: parseInt(up4pct) || 0,
+            decliningIssues: parseInt(down4pct) || 0,
+            newHighs: Math.round((parseInt(up25quarter) || 0) / 10), // Scale down quarterly data
+            newLows: Math.round((parseInt(down25quarter) || 0) / 10),
+            upVolume: parseInt(up25month) || 0,
+            downVolume: parseInt(down25month) || 0,
+            breadthScore: 0, // Will be calculated
+            dataSource: 'imported',
+            notes: `T2108: ${t2108}, SP: ${sp500}, 5d: ${ratio5day}, 10d: ${ratio10day}` + 
+                   (rest.length > 0 ? `, ${rest.join(', ')}` : '')
+          }
+        } else {
+          // Standard Format
+          if (values.length < 7) {
+            errors.push(`Row ${i + 2}: Insufficient columns for standard format`)
+            errorCount++
+            continue
+          }
+
+          const [date, advIssues, decIssues, newHighs, newLows, upVol, downVol, ...rest] = values
+          
+          breadthData = {
+            date: date,
+            timestamp: new Date(date + 'T16:00:00').toISOString(),
+            advancingIssues: parseInt(advIssues) || 0,
+            decliningIssues: parseInt(decIssues) || 0,
+            newHighs: parseInt(newHighs) || 0,
+            newLows: parseInt(newLows) || 0,
+            upVolume: parseFloat(upVol) || 0,
+            downVolume: parseFloat(downVol) || 0,
+            breadthScore: 0,
+            dataSource: 'imported',
+            notes: rest.length > 0 ? rest.join(', ') : undefined
+          }
+        }
+
+        // Validate date
+        if (!breadthData.date || breadthData.date === '' || breadthData.date === 'Date') {
+          continue // Skip header rows or invalid dates
         }
 
         // Check for duplicate
         const existing = this.db.prepare(
-          'SELECT id FROM market_breadth WHERE date = ? AND timestamp = ?'
-        ).get(breadthData.date, breadthData.timestamp)
+          'SELECT id FROM market_breadth WHERE date = ?'
+        ).get(breadthData.date)
 
         if (existing) {
           duplicates.push(`${breadthData.date}`)
@@ -266,10 +329,15 @@ export class BreadthService {
 
     return {
       success: errorCount === 0 || importedCount > 0,
-      importedCount,
-      skippedCount,
-      errorCount,
-      errors: errors.length > 0 ? errors : undefined,
+      imported: importedCount,
+      importedCount: importedCount,  // Legacy compatibility
+      skipped: skippedCount,
+      skippedCount: skippedCount,   // Legacy compatibility
+      errors: errorCount,
+      errorCount: errorCount,       // Legacy compatibility
+      errorDetails: errors,
+      columnMapping: headers,
+      message: `Successfully imported ${importedCount} records, skipped ${skippedCount} duplicates, ${errorCount} errors`,
       duplicates: duplicates.length > 0 ? duplicates : undefined
     }
   }

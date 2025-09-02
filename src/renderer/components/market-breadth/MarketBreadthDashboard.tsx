@@ -17,7 +17,8 @@ import { DataEntryForm } from './DataEntryForm'
 import { HistoricalDataTable } from './HistoricalDataTable'
 import { BreadthScoreCalculator } from './BreadthScoreCalculator'
 import { CSVManager } from './CSVManager'
-import type { BreadthData } from '../../../types/trading'
+import { CSVImportModal } from './CSVImportModal'
+import type { BreadthData, CSVImportResult } from '../../../types/trading'
 
 interface DashboardStats {
   currentBreadthScore: number | null
@@ -43,6 +44,7 @@ const VIEWS: ActiveView[] = [
 export function MarketBreadthDashboard() {
   // State management
   const [activeView, setActiveView] = useState<ActiveView['type']>('dashboard')
+  const [isCSVImportOpen, setIsCSVImportOpen] = useState(false)
   const [stats, setStats] = useState<DashboardStats>({
     currentBreadthScore: null,
     marketPhase: 'Unknown',
@@ -108,6 +110,13 @@ export function MarketBreadthDashboard() {
   const handleDataEntrySuccess = useCallback(() => {
     loadDashboardData()
     setActiveView('dashboard')
+  }, [loadDashboardData])
+
+  // Handle CSV import success
+  const handleCSVImportComplete = useCallback((result: CSVImportResult) => {
+    console.log('CSV Import completed:', result)
+    loadDashboardData()
+    setIsCSVImportOpen(false)
   }, [loadDashboardData])
 
   // Load data on component mount
@@ -237,7 +246,7 @@ export function MarketBreadthDashboard() {
             <span>Manual Entry</span>
           </button>
           <button
-            onClick={() => setActiveView('csv')}
+            onClick={() => setIsCSVImportOpen(true)}
             className="flex items-center space-x-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <Upload className="w-4 h-4" />
@@ -463,6 +472,13 @@ export function MarketBreadthDashboard() {
           </div>
         </div>
       )}
+
+      {/* CSV Import Modal */}
+      <CSVImportModal
+        isOpen={isCSVImportOpen}
+        onClose={() => setIsCSVImportOpen(false)}
+        onImportComplete={handleCSVImportComplete}
+      />
     </div>
   )
 }
