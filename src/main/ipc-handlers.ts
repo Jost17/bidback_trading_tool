@@ -142,5 +142,41 @@ export function setupTradingHandlers(ipcMain: IpcMain, database: TradingDatabase
     }
   })
 
+  // Breadth Calculator Handlers
+  ipcMain.handle('breadth-calculator:list-configs', async () => {
+    try {
+      // Return default breadth calculator configurations
+      return {
+        success: true,
+        configs: [
+          {
+            id: 'default',
+            name: 'Default Market Breadth',
+            description: '6-Factor Market Breadth Calculator',
+            factors: ['stocks_up_4pct', 'stocks_down_4pct', 't2108', 'sp500', 'ratio_5day', 'ratio_10day']
+          }
+        ]
+      }
+    } catch (error) {
+      console.error('Error listing breadth calculator configs:', error)
+      throw error
+    }
+  })
+
+  ipcMain.handle('breadth-calculator:health-check', async () => {
+    try {
+      // Return health status
+      return {
+        success: true,
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        database: database.db && database.db.open ? 'connected' : 'disconnected'
+      }
+    } catch (error) {
+      console.error('Error checking breadth calculator health:', error)
+      throw error
+    }
+  })
+
   console.log('Trading IPC handlers setup complete')
 }

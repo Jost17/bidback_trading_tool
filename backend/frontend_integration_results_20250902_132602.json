@@ -1,0 +1,115 @@
+{
+  "test_run_timestamp": "2025-09-02T13:26:02.073222",
+  "frontend_url": "http://localhost:3000",
+  "backend_url": "http://localhost:3001",
+  "tests": {
+    "Frontend Accessibility Test": {
+      "test_name": "Frontend Accessibility Test",
+      "status": "PASSED",
+      "details": {
+        "status_code": 200,
+        "content_length": 652,
+        "contains_react": true,
+        "contains_vite": true
+      },
+      "errors": []
+    },
+    "Backend-Frontend Connectivity Test": {
+      "test_name": "Backend-Frontend Connectivity Test",
+      "status": "PASSED",
+      "details": {
+        "preflight_status": 200,
+        "api_call_status": 200,
+        "cors_headers_present": true,
+        "backend_response": {
+          "status": "healthy",
+          "timestamp": "2025-09-02T13:26:02.099741",
+          "risk_manager_initialized": true,
+          "active_positions": 2,
+          "backend_version": "1.0.0"
+        }
+      },
+      "errors": []
+    },
+    "Risk Management Integration Test": {
+      "test_name": "Risk Management Integration Test",
+      "status": "PASSED",
+      "details": {
+        "position_opened": true,
+        "position_id": "MSFT",
+        "calculated_regime": "bull_normal",
+        "stop_level": 309.67744,
+        "profit_targets": [
+          360.8096,
+          405.02,
+          456.03200000000004
+        ],
+        "positions_retrieved": true,
+        "performance_retrieved": true,
+        "active_positions_count": 3
+      },
+      "errors": []
+    },
+    "Market Breadth Data Flow Test": {
+      "test_name": "Market Breadth Data Flow Test",
+      "status": "PASSED",
+      "details": {
+        "summary_retrieved": true,
+        "total_records": 4255,
+        "data_coverage": {
+          "stocks_up_4pct_daily": 100.0,
+          "stocks_down_4pct_daily": 87.9,
+          "t2108": 74.0,
+          "sp_reference": 62.9,
+          "true_range": 62.9
+        },
+        "latest_data_date": "2025-06-06",
+        "latest_t2108": 66.6,
+        "latest_true_range": 115.05999999999949,
+        "historical_records_returned": 50,
+        "data_quality_acceptable": true
+      },
+      "errors": []
+    },
+    "Real-time Updates Test": {
+      "test_name": "Real-time Updates Test",
+      "status": "PASSED",
+      "details": {
+        "position_created": true,
+        "update_scenarios_tested": 3,
+        "successful_updates": 3,
+        "update_results": [
+          {
+            "scenario": 1,
+            "price": 202.5,
+            "status": "ACTIVE",
+            "actions": 0,
+            "current_pnl": 0.0125
+          },
+          {
+            "scenario": 2,
+            "price": 195.0,
+            "status": "ACTIVE",
+            "actions": 0,
+            "current_pnl": -0.025
+          },
+          {
+            "scenario": 3,
+            "price": 210.0,
+            "status": "ACTIVE",
+            "actions": 0,
+            "current_pnl": 0.05
+          }
+        ]
+      },
+      "errors": []
+    }
+  },
+  "overall_status": "PASSED",
+  "summary": {
+    "total_tests": 5,
+    "passed_tests": 5,
+    "failed_tests": 0,
+    "success_rate": 100.0
+  }
+}

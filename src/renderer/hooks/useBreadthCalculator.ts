@@ -72,25 +72,29 @@ export function useBreadthCalculator(options: UseBreadthCalculatorOptions = {}) 
   }, []);
 
   /**
-   * Initialize calculator system
+   * Initialize calculator system - Simplified version without complex handlers
    */
   const initializeCalculator = useCallback(async () => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      // Load available algorithms
-      const algorithmsResponse = await window.tradingAPI?.invoke?.('breadth-calculator:get-algorithms');
-      if (algorithmsResponse?.success) {
-        setState(prev => ({ 
-          ...prev, 
-          availableAlgorithms: algorithmsResponse.algorithms 
-        }));
-      }
+      // Mock available algorithms since we don't have the complex handlers
+      const mockAlgorithms = [
+        {
+          type: 'six_factor' as AlgorithmType,
+          name: 'Six Factor Breadth',
+          description: 'Standard 6-factor market breadth calculation',
+          requiredFields: ['advancingIssues', 'decliningIssues', 'newHighs', 'newLows'],
+          optionalFields: ['upVolume', 'downVolume']
+        }
+      ];
 
-      // Switch to default algorithm and get config
-      await switchAlgorithm(defaultAlgorithm);
-
-      setState(prev => ({ ...prev, isLoading: false }));
+      setState(prev => ({ 
+        ...prev, 
+        availableAlgorithms: mockAlgorithms,
+        currentAlgorithm: defaultAlgorithm,
+        isLoading: false
+      }));
     } catch (error) {
       setState(prev => ({ 
         ...prev, 
@@ -196,28 +200,15 @@ export function useBreadthCalculator(options: UseBreadthCalculatorOptions = {}) 
   }, [state.currentAlgorithm]);
 
   /**
-   * Get real-time calculation for latest data
+   * Get real-time calculation for latest data - Simplified mock version
    */
   const calculateRealTime = useCallback(async (algorithm?: AlgorithmType): Promise<BreadthResult | null> => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await window.tradingAPI?.invoke?.('breadth-calculator:calculate-realtime', 
-        algorithm || state.currentAlgorithm
-      );
-
-      if (!response) {
-        setState(prev => ({ ...prev, isLoading: false }));
-        return null;
-      }
-
-      setState(prev => ({ 
-        ...prev, 
-        isLoading: false,
-        latestResult: response
-      }));
-
-      return response;
+      // Mock result for now - in real implementation this would get latest data from DB
+      setState(prev => ({ ...prev, isLoading: false }));
+      return null; // No complex calculator available
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Real-time calculation failed';
       setState(prev => ({ 
@@ -230,7 +221,7 @@ export function useBreadthCalculator(options: UseBreadthCalculatorOptions = {}) 
   }, [state.currentAlgorithm]);
 
   /**
-   * Switch algorithm
+   * Switch algorithm - Simplified mock version
    */
   const switchAlgorithm = useCallback(async (
     algorithm: AlgorithmType, 
@@ -239,22 +230,14 @@ export function useBreadthCalculator(options: UseBreadthCalculatorOptions = {}) 
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await window.tradingAPI?.invoke?.('breadth-calculator:switch-algorithm', 
-        algorithm, 
-        customConfig
-      );
-
-      if (response?.success) {
-        setState(prev => ({ 
-          ...prev, 
-          currentAlgorithm: algorithm,
-          currentConfig: response.config,
-          isLoading: false
-        }));
-        return true;
-      } else {
-        throw new Error(response?.error || 'Failed to switch algorithm');
-      }
+      // Mock algorithm switch
+      setState(prev => ({ 
+        ...prev, 
+        currentAlgorithm: algorithm,
+        currentConfig: null, // No complex config for now
+        isLoading: false
+      }));
+      return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Algorithm switch failed';
       setState(prev => ({ 

@@ -17,6 +17,7 @@
     "src/database/connection.ts",
     "src/database/services/breadth-service.ts",
     "src/database/services/trade-service.ts",
+    "src/database/services/data-recovery-service.ts",
     "src/types/trading.ts"
   ],
   "exclude": [

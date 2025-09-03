@@ -79,20 +79,18 @@ export interface MarketDataInput {
   stocks_down_50pct_month: string
   stocks_up_13pct_34days: string
   stocks_down_13pct_34days: string
-  worden_universe: string
-  sp500: string
+  ratio_5day: string
+  ratio_10day: string
   t2108: string
-  basic_materials_sector: string
-  consumer_cyclical_sector: string
-  financial_services_sector: string
-  real_estate_sector: string
-  consumer_defensive_sector: string
-  healthcare_sector: string
-  utilities_sector: string
-  communication_services_sector: string
-  energy_sector: string
-  industrials_sector: string
-  technology_sector: string
+  worden_t2108: string
+  sp_reference: string
+  stocks_up_20pct: string
+  stocks_down_20pct: string
+  stocks_up_20dollar: string
+  stocks_down_20dollar: string
+  // Legacy fields for compatibility
+  worden_universe?: string
+  sp500?: string
 }
 
 // OCR Extracted Data (from breadth_score_tool)

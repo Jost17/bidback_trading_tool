@@ -1,0 +1,34 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "lib": ["ES2022"],
+    "noEmit": false,
+    "outDir": "dist/main",
+    "jsx": "preserve",
+    "allowJs": false,
+    "composite": true,
+    "skipLibCheck": true,
+    "strict": false
+  },
+  "include": [
+    "src/main/main.ts",
+    "src/main/ipc-handlers.ts",
+    "src/preload/preload.ts",
+    "src/database/connection.ts",
+    "src/database/services/breadth-service.ts",
+    "src/database/services/trade-service.ts",
+    "src/types/trading.ts"
+  ],
+  "exclude": [
+    "src/renderer",
+    "node_modules",
+    "dist",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "src/services/**",
+    "src/database/benchmarks/**",
+    "src/database/utils/**"
+  ]
+}

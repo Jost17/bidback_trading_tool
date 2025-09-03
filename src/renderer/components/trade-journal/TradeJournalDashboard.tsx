@@ -1,17 +1,32 @@
 import React from 'react'
-import { BookOpen, Plus, DollarSign, TrendingUp, TrendingDown } from 'lucide-react'
+import { BookOpen, Plus, DollarSign, TrendingUp, TrendingDown, ArrowLeft } from 'lucide-react'
 
-export function TradeJournalDashboard() {
+interface TradeJournalDashboardProps {
+  onNavigateBack?: () => void
+}
+
+export function TradeJournalDashboard({ onNavigateBack }: TradeJournalDashboardProps = {}) {
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
-            <BookOpen className="w-7 h-7 text-blue-600" />
-            <span>Trade Journal</span>
-          </h1>
-          <p className="text-gray-600 mt-1">Performance tracking & trade analysis</p>
+        <div className="flex items-center space-x-4">
+          {onNavigateBack && (
+            <button
+              onClick={onNavigateBack}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Back to Market Breadth"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
+              <BookOpen className="w-7 h-7 text-blue-600" />
+              <span>Trade Journal</span>
+            </h1>
+            <p className="text-gray-600 mt-1">Performance tracking & trade analysis</p>
+          </div>
         </div>
         
         <div className="flex space-x-3">

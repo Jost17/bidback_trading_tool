@@ -1,19 +1,34 @@
 import React from 'react'
-import { TrendingUp, AlertTriangle, Activity, Wifi, WifiOff } from 'lucide-react'
+import { TrendingUp, AlertTriangle, Activity, Wifi, WifiOff, ArrowLeft } from 'lucide-react'
 
-export function TradingDashboard() {
+interface TradingDashboardProps {
+  onNavigateBack?: () => void
+}
+
+export function TradingDashboard({ onNavigateBack }: TradingDashboardProps = {}) {
   const [isConnected] = React.useState(false)
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
-            <TrendingUp className="w-7 h-7 text-blue-600" />
-            <span>Live Trading</span>
-          </h1>
-          <p className="text-gray-600 mt-1">Interactive Brokers integration & order management</p>
+        <div className="flex items-center space-x-4">
+          {onNavigateBack && (
+            <button
+              onClick={onNavigateBack}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Back to Market Breadth"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
+              <TrendingUp className="w-7 h-7 text-blue-600" />
+              <span>Live Trading</span>
+            </h1>
+            <p className="text-gray-600 mt-1">Interactive Brokers integration & order management</p>
+          </div>
         </div>
         
         <div className="flex items-center space-x-3">

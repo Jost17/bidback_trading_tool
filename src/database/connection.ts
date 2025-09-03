@@ -26,6 +26,9 @@ export class TradingDatabase {
     // Initialize schema
     this.initializeSchema()
     
+    // Run migrations
+    this.runMigrations()
+    
     console.log(`Trading database initialized at: ${this.dbPath}`)
   }
 
@@ -316,17 +319,71 @@ export class TradingDatabase {
     }
   }
 
+  // Run all migrations
+  private runMigrations(): void {
+    console.log('Running database migrations...')
+    
+    // Migration 2: Add missing breadth fields
+    this.runMigration(2, 'Add missing breadth fields for complete CSV data', `
+      -- Add missing fields for 20% movements
+      ALTER TABLE market_breadth ADD COLUMN stocks_up_20pct INTEGER DEFAULT NULL;
+      ALTER TABLE market_breadth ADD COLUMN stocks_down_20pct INTEGER DEFAULT NULL;
+      ALTER TABLE market_breadth ADD COLUMN stocks_up_20dollar INTEGER DEFAULT NULL;
+      ALTER TABLE market_breadth ADD COLUMN stocks_down_20dollar INTEGER DEFAULT NULL;
+      
+      -- Add ratio fields
+      ALTER TABLE market_breadth ADD COLUMN ratio_5day REAL DEFAULT NULL;
+      ALTER TABLE market_breadth ADD COLUMN ratio_10day REAL DEFAULT NULL;
+      
+      -- Add percentage movement fields
+      ALTER TABLE market_breadth ADD COLUMN stocks_up_4pct INTEGER DEFAULT NULL;
+      ALTER TABLE market_breadth ADD COLUMN stocks_down_4pct INTEGER DEFAULT NULL;
+      ALTER TABLE market_breadth ADD COLUMN stocks_up_25pct_quarter INTEGER DEFAULT NULL;
+      ALTER TABLE market_breadth ADD COLUMN stocks_down_25pct_quarter INTEGER DEFAULT NULL;
+      ALTER TABLE market_breadth ADD COLUMN stocks_up_25pct_month INTEGER DEFAULT NULL;
+      ALTER TABLE market_breadth ADD COLUMN stocks_down_25pct_month INTEGER DEFAULT NULL;
+      ALTER TABLE market_breadth ADD COLUMN stocks_up_50pct_month INTEGER DEFAULT NULL;
+      ALTER TABLE market_breadth ADD COLUMN stocks_down_50pct_month INTEGER DEFAULT NULL;
+      ALTER TABLE market_breadth ADD COLUMN stocks_up_13pct_34days INTEGER DEFAULT NULL;
+      ALTER TABLE market_breadth ADD COLUMN stocks_down_13pct_34days INTEGER DEFAULT NULL;
+      
+      -- Add reference fields
+      ALTER TABLE market_breadth ADD COLUMN worden_universe INTEGER DEFAULT NULL;
+      ALTER TABLE market_breadth ADD COLUMN t2108 REAL DEFAULT NULL;
+      ALTER TABLE market_breadth ADD COLUMN sp500 TEXT DEFAULT NULL;
+      
+      -- Add metadata fields
+      ALTER TABLE market_breadth ADD COLUMN source_file TEXT DEFAULT NULL;
+      ALTER TABLE market_breadth ADD COLUMN import_format TEXT DEFAULT NULL;
+      ALTER TABLE market_breadth ADD COLUMN data_quality_score REAL DEFAULT NULL;
+    `)
+  }
+
   // Utility method to run migrations
   public runMigration(version: number, description: string, sql: string): void {
     const existingVersion = this.db.prepare('SELECT version FROM schema_version WHERE version = ?').get(version)
     
     if (!existingVersion) {
-      this.db.transaction(() => {
-        this.db.exec(sql)
+      try {
+        // SQLite doesn't support IF NOT EXISTS for ALTER TABLE, so we need to check each column
+        const lines = sql.split('\n').filter(line => line.trim().startsWith('ALTER TABLE'))
+        
+        for (const line of lines) {
+          try {
+            this.db.exec(line)
+          } catch (error: any) {
+            // Ignore "duplicate column" errors
+            if (!error.message.includes('duplicate column')) {
+              console.error(`Error executing: ${line}`, error)
+            }
+          }
+        }
+        
         this.db.prepare('INSERT INTO schema_version (version, description) VALUES (?, ?)').run(version, description)
-      })()
-      
-      console.log(`Migration ${version} applied: ${description}`)
+        console.log(`Migration ${version} applied: ${description}`)
+      } catch (error) {
+        console.error(`Failed to apply migration ${version}:`, error)
+      }
     } else {
       console.log(`Migration ${version} already applied, skipping`)
     }

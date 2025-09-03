@@ -16,6 +16,17 @@ export function useAppInitialization(): UseAppInitializationReturn {
       try {
         // Step 1: Check if trading API is available
         setInitializationProgress('Checking Trading API...')
+        
+        // Temporarily skip API check for browser demo
+        const isElectron = window.electronAPI || window.tradingAPI
+        if (!isElectron) {
+          console.warn('Running in browser demo mode - skipping API checks')
+          setInitializationProgress('Browser demo mode - Ready!')
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          setIsInitialized(true)
+          return
+        }
+        
         if (!window.tradingAPI) {
           throw new Error('Trading API not available')
         }

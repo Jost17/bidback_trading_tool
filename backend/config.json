@@ -1,0 +1,24 @@
+{
+    "position_sizing": {
+        "max_position_size": 100.0,
+        "risk_per_trade": 2.0,
+        "max_correlation_exposure": 10.0
+    },
+    "regime_overrides": {
+        "force_regime": null,
+        "disable_transitions": false,
+        "emergency_protocols": true
+    },
+    "performance_targets": {
+        "target_roi": 400.0,
+        "max_drawdown_tolerance": 15.0,
+        "min_sharpe_ratio": 2.0,
+        "min_win_rate": 0.6
+    },
+    "risk_limits": {
+        "max_stop_distance": 25.0,
+        "min_stop_distance": 2.0,
+        "max_profit_target": 100.0,
+        "position_concentration_limit": 20.0
+    }
+}

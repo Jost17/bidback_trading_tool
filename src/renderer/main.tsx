@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import TempApp from './TempApp'
+import App from './App'
 import './index.css'
 
 // Type check for window.tradingAPI to ensure preload script loaded
@@ -11,6 +11,6 @@ import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <TempApp />
+    <App />
   </React.StrictMode>
 )

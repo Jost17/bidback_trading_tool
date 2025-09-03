@@ -7,7 +7,8 @@ import { TradingDatabase } from '../database/connection'
 let mainWindow: BrowserWindow | null = null
 let database: TradingDatabase | null = null
 
-const isDev = process.env.NODE_ENV === 'development'
+const isDev = true // Force development mode for local dev
+console.log('Development mode:', isDev, 'NODE_ENV:', process.env.NODE_ENV)
 
 function createWindow(): void {
   // Create the browser window
@@ -41,10 +42,11 @@ function createWindow(): void {
 
   // Load the app
   if (isDev) {
-    mainWindow.loadURL('http://127.0.0.1:5173')
+    console.log('Loading dev server at: http://localhost:3000')
+    mainWindow.loadURL('http://localhost:3000')
     mainWindow.webContents.openDevTools()
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
+    mainWindow.loadFile(path.join(__dirname, '../../../renderer/index.html'))
   }
 
   // Show window when ready to prevent visual flash

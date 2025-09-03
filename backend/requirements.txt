@@ -1,0 +1,29 @@
+# FastAPI Backend Requirements for BIDBACK Trading Tool
+
+# Core FastAPI Dependencies
+fastapi
+uvicorn[standard]
+python-multipart
+websockets
+
+# Data Processing & Analysis
+pandas
+numpy
+
+# Interactive Brokers Integration
+ib-insync
+
+# Visualization (for backtesting reports)
+matplotlib
+seaborn
+
+# Additional utilities
+python-dotenv
+pydantic
+
+# JSON serialization optimization
+orjson
+
+# Development dependencies
+pytest
+black

@@ -5,13 +5,15 @@ import { MarketBreadthDashboard } from './components/market-breadth/MarketBreadt
 import { TradeJournalDashboard } from './components/trade-journal/TradeJournalDashboard'
 import { TradingDashboard } from './components/trading/TradingDashboard'
 import { SettingsPage } from './components/settings/SettingsPage'
+import RiskManagementDashboard from './components/risk/RiskManagementDashboard'
 import { LoadingSpinner } from './components/ui/LoadingSpinner'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { TradingProvider } from './context/TradingContext'
 import { useAppInitialization } from './hooks/useAppInitialization'
 
 function App() {
   const { isInitialized, error, initializationProgress } = useAppInitialization()
-  const [currentView, setCurrentView] = useState<'market-breadth' | 'trade-journal' | 'trading' | 'settings'>('market-breadth')
+  const [currentView, setCurrentView] = useState<'market-breadth' | 'trade-journal' | 'trading' | 'risk-management' | 'settings'>('market-breadth')
 
   if (error) {
     return (
@@ -54,49 +56,49 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50">
-        {/* Navigation Header */}
-        <Navigation 
-          currentView={currentView}
-          onViewChange={setCurrentView}
-        />
+      <TradingProvider>
+        <div className="min-h-screen bg-gray-50">
+          {/* Navigation Header with Status Bar */}
+          <Navigation 
+            currentView={currentView}
+            onViewChange={setCurrentView}
+          />
+          
+          {/* Main Content */}
+          <main className="container mx-auto px-4 py-6">
+            {currentView === 'market-breadth' && (
+              <MarketBreadthDashboard 
+                onNavigateHome={() => {
+                  // Navigate to main navigation view (for now keep market-breadth but user can switch)
+                  // In future, this could scroll to top or show a main overview
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }}
+              />
+            )}
+            
+            {currentView === 'trade-journal' && (
+              <TradeJournalDashboard 
+                onNavigateBack={() => setCurrentView('market-breadth')}
+              />
+            )}
+            
+            {currentView === 'trading' && (
+              <TradingDashboard 
+                onNavigateBack={() => setCurrentView('market-breadth')}
+              />
+            )}
+            
+            {currentView === 'risk-management' && (
+              <RiskManagementDashboard />
+            )}
+            
+            {currentView === 'settings' && (
+              <SettingsPage />
+            )}
+          </main>
         
-        {/* Main Content */}
-        <main className="container mx-auto px-4 py-6">
-          {currentView === 'market-breadth' && (
-            <MarketBreadthDashboard />
-          )}
-          
-          {currentView === 'trade-journal' && (
-            <TradeJournalDashboard />
-          )}
-          
-          {currentView === 'trading' && (
-            <TradingDashboard />
-          )}
-          
-          {currentView === 'settings' && (
-            <SettingsPage />
-          )}
-        </main>
-        
-        {/* Status Bar */}
-        <div className="fixed bottom-0 left-0 right-0 bg-gray-800 text-white px-4 py-2 text-xs flex justify-between items-center">
-          <div className="flex space-x-4">
-            <span>BIDBACK Trading Tool v{window.versions?.app || '1.0.0'}</span>
-            <span>•</span>
-            <span>Electron v{window.versions?.electron || 'Unknown'}</span>
-            <span>•</span>
-            <span className="text-green-400">● Connected</span>
-          </div>
-          
-          <div className="flex space-x-4">
-            <span>{window.platform?.os || 'Unknown OS'}</span>
-            <span>•</span>
-            <span>{new Date().toLocaleTimeString()}</span>
-          </div>
         </div>
-      </div>
+      </TradingProvider>
     </ErrorBoundary>
   )
 }

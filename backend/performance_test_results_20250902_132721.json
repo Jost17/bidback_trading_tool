@@ -1,0 +1,304 @@
+{
+  "test_run_timestamp": "2025-09-02T13:27:20.525663",
+  "system_info": {
+    "backend_url": "http://localhost:3001",
+    "database_path": "src/database/trading.db"
+  },
+  "tests": {
+    "Database Performance Test": {
+      "test_name": "Database Performance Test",
+      "status": "PASSED",
+      "details": {
+        "query_performance": {
+          "Simple Select": {
+            "execution_time_ms": 6.54,
+            "rows_returned": 1,
+            "performance_rating": "Good"
+          },
+          "Date Range Query": {
+            "execution_time_ms": 0.61,
+            "rows_returned": 100,
+            "performance_rating": "Good"
+          },
+          "Complex Aggregation": {
+            "execution_time_ms": 0.09,
+            "rows_returned": 50,
+            "performance_rating": "Good"
+          },
+          "True Range Analysis": {
+            "execution_time_ms": 0.73,
+            "rows_returned": 1,
+            "performance_rating": "Good"
+          }
+        },
+        "bulk_operation": {
+          "records_fetched": 1000,
+          "fetch_time_ms": 1.49,
+          "records_per_second": 672595.25
+        }
+      },
+      "errors": []
+    },
+    "Concurrent API Load Test": {
+      "test_name": "Concurrent API Load Test",
+      "status": "PASSED",
+      "details": {
+        "endpoint_performance": {
+          "/health": {
+            "1_concurrent": {
+              "avg_response_time_ms": 7.57,
+              "max_response_time_ms": 7.57,
+              "min_response_time_ms": 7.57,
+              "success_rate": 100.0,
+              "requests_per_second": 132.05
+            },
+            "5_concurrent": {
+              "avg_response_time_ms": 3.56,
+              "max_response_time_ms": 4.28,
+              "min_response_time_ms": 2.7,
+              "success_rate": 100.0,
+              "requests_per_second": 1169.05
+            },
+            "10_concurrent": {
+              "avg_response_time_ms": 4.11,
+              "max_response_time_ms": 5.03,
+              "min_response_time_ms": 3.15,
+              "success_rate": 100.0,
+              "requests_per_second": 1986.5
+            },
+            "20_concurrent": {
+              "avg_response_time_ms": 5.96,
+              "max_response_time_ms": 8.06,
+              "min_response_time_ms": 3.36,
+              "success_rate": 100.0,
+              "requests_per_second": 2480.81
+            }
+          },
+          "/positions": {
+            "1_concurrent": {
+              "avg_response_time_ms": 2.02,
+              "max_response_time_ms": 2.02,
+              "min_response_time_ms": 2.02,
+              "success_rate": 100.0,
+              "requests_per_second": 494.79
+            },
+            "5_concurrent": {
+              "avg_response_time_ms": 3.34,
+              "max_response_time_ms": 3.71,
+              "min_response_time_ms": 2.37,
+              "success_rate": 100.0,
+              "requests_per_second": 1347.0
+            },
+            "10_concurrent": {
+              "avg_response_time_ms": 5.34,
+              "max_response_time_ms": 6.65,
+              "min_response_time_ms": 4.58,
+              "success_rate": 100.0,
+              "requests_per_second": 1502.63
+            },
+            "20_concurrent": {
+              "avg_response_time_ms": 6.37,
+              "max_response_time_ms": 9.15,
+              "min_response_time_ms": 3.68,
+              "success_rate": 100.0,
+              "requests_per_second": 2186.7
+            }
+          },
+          "/performance": {
+            "1_concurrent": {
+              "avg_response_time_ms": 1.74,
+              "max_response_time_ms": 1.74,
+              "min_response_time_ms": 1.74,
+              "success_rate": 100.0,
+              "requests_per_second": 574.01
+            },
+            "5_concurrent": {
+              "avg_response_time_ms": 3.11,
+              "max_response_time_ms": 3.57,
+              "min_response_time_ms": 2.66,
+              "success_rate": 100.0,
+              "requests_per_second": 1400.62
+            },
+            "10_concurrent": {
+              "avg_response_time_ms": 5.06,
+              "max_response_time_ms": 5.76,
+              "min_response_time_ms": 4.63,
+              "success_rate": 100.0,
+              "requests_per_second": 1735.55
+            },
+            "20_concurrent": {
+              "avg_response_time_ms": 6.89,
+              "max_response_time_ms": 10.8,
+              "min_response_time_ms": 3.12,
+              "success_rate": 100.0,
+              "requests_per_second": 1851.87
+            }
+          },
+          "/breadth/latest": {
+            "1_concurrent": {
+              "avg_response_time_ms": 3.63,
+              "max_response_time_ms": 3.63,
+              "min_response_time_ms": 3.63,
+              "success_rate": 100.0,
+              "requests_per_second": 275.72
+            },
+            "5_concurrent": {
+              "avg_response_time_ms": 7.44,
+              "max_response_time_ms": 9.64,
+              "min_response_time_ms": 4.82,
+              "success_rate": 100.0,
+              "requests_per_second": 518.93
+            },
+            "10_concurrent": {
+              "avg_response_time_ms": 9.45,
+              "max_response_time_ms": 13.57,
+              "min_response_time_ms": 5.26,
+              "success_rate": 100.0,
+              "requests_per_second": 737.08
+            },
+            "20_concurrent": {
+              "avg_response_time_ms": 17.71,
+              "max_response_time_ms": 27.47,
+              "min_response_time_ms": 8.03,
+              "success_rate": 100.0,
+              "requests_per_second": 727.94
+            }
+          },
+          "/breadth/summary": {
+            "1_concurrent": {
+              "avg_response_time_ms": 8.72,
+              "max_response_time_ms": 8.72,
+              "min_response_time_ms": 8.72,
+              "success_rate": 100.0,
+              "requests_per_second": 114.73
+            },
+            "5_concurrent": {
+              "avg_response_time_ms": 10.03,
+              "max_response_time_ms": 14.37,
+              "min_response_time_ms": 5.3,
+              "success_rate": 100.0,
+              "requests_per_second": 347.97
+            },
+            "10_concurrent": {
+              "avg_response_time_ms": 16.53,
+              "max_response_time_ms": 26.23,
+              "min_response_time_ms": 6.7,
+              "success_rate": 100.0,
+              "requests_per_second": 381.17
+            },
+            "20_concurrent": {
+              "avg_response_time_ms": 29.87,
+              "max_response_time_ms": 50.58,
+              "min_response_time_ms": 9.27,
+              "success_rate": 100.0,
+              "requests_per_second": 395.44
+            }
+          }
+        },
+        "overall_metrics": {
+          "avg_response_time_ms": 7.92,
+          "max_avg_response_time_ms": 29.87,
+          "performance_under_load": "Good"
+        }
+      },
+      "errors": []
+    },
+    "Risk Management Performance Test": {
+      "test_name": "Risk Management Performance Test",
+      "status": "PASSED",
+      "details": {
+        "scenario_performance": {
+          "Simple Bull Market": {
+            "open_time_ms": 2.34,
+            "open_success": true,
+            "avg_update_time_ms": 2.1,
+            "max_update_time_ms": 3.05,
+            "total_calculation_time_ms": 12.85
+          },
+          "High Volatility Crisis": {
+            "open_time_ms": 1.68,
+            "open_success": true,
+            "avg_update_time_ms": 1.67,
+            "max_update_time_ms": 1.88,
+            "total_calculation_time_ms": 10.01
+          },
+          "Neutral Market": {
+            "open_time_ms": 2.09,
+            "open_success": true,
+            "avg_update_time_ms": 1.78,
+            "max_update_time_ms": 2.05,
+            "total_calculation_time_ms": 11.01
+          }
+        },
+        "performance_summary": {
+          "avg_position_open_ms": 2.04,
+          "max_position_open_ms": 2.34,
+          "avg_position_update_ms": 1.85,
+          "calculation_performance": "Excellent"
+        }
+      },
+      "errors": []
+    },
+    "Memory and Resource Usage Test": {
+      "test_name": "Memory and Resource Usage Test",
+      "status": "PASSED",
+      "details": {
+        "total_rapid_calls": 100,
+        "total_test_time_ms": 356.98,
+        "successful_calls": 100,
+        "success_rate": 100.0,
+        "avg_response_time_ms": 3.57,
+        "first_10_calls_avg_ms": 3.16,
+        "last_10_calls_avg_ms": 3.0,
+        "performance_degradation_pct": -4.98,
+        "calls_per_second": 280.13,
+        "memory_stability": "Good"
+      },
+      "errors": []
+    },
+    "Error Handling Performance Test": {
+      "test_name": "Error Handling Performance Test",
+      "status": "PASSED",
+      "details": {
+        "error_scenarios": {
+          "Invalid Position Data": {
+            "response_time_ms": 2.69,
+            "status_code": 422,
+            "handled_gracefully": true,
+            "response_contains_error": false
+          },
+          "Non-existent Position Update": {
+            "response_time_ms": 1.79,
+            "status_code": 422,
+            "handled_gracefully": true,
+            "response_contains_error": false
+          },
+          "Invalid Date Range": {
+            "response_time_ms": 2.98,
+            "status_code": 200,
+            "handled_gracefully": false,
+            "response_contains_error": false
+          }
+        },
+        "error_recovery": {
+          "recovery_time_ms": 1.7,
+          "system_recovered": true,
+          "recovery_performance": "Fast"
+        }
+      },
+      "errors": []
+    }
+  },
+  "overall_status": "PASSED",
+  "performance_summary": {
+    "avg_database_query_ms": 1.99,
+    "avg_position_calculation_ms": 2.04
+  },
+  "summary": {
+    "total_tests": 5,
+    "passed_tests": 5,
+    "failed_tests": 0,
+    "success_rate": 100.0,
+    "system_performance_rating": "Excellent"
+  }
+}

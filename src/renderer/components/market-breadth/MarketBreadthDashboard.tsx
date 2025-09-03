@@ -9,7 +9,9 @@ import {
   RefreshCw,
   Calendar,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Home,
+  ChevronLeft
 } from 'lucide-react'
 import { useBreadthCalculator } from '../../hooks/useBreadthCalculator'
 import { BreadthCharts } from './BreadthCharts'
@@ -41,7 +43,11 @@ const VIEWS: ActiveView[] = [
   { type: 'csv', title: 'Import/Export' }
 ]
 
-export function MarketBreadthDashboard() {
+interface MarketBreadthDashboardProps {
+  onNavigateHome?: () => void
+}
+
+export function MarketBreadthDashboard({ onNavigateHome }: MarketBreadthDashboardProps = {}) {
   // State management
   const [activeView, setActiveView] = useState<ActiveView['type']>('dashboard')
   const [isCSVImportOpen, setIsCSVImportOpen] = useState(false)
@@ -73,22 +79,32 @@ export function MarketBreadthDashboard() {
     setError(null)
 
     try {
-      // Get recent breadth data
-      const endDate = new Date().toISOString().split('T')[0]
-      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      // Try to get all recent data first to find the actual date range
+      const allData = await window.tradingAPI.getBreadthData('2020-01-01', '2030-12-31')
       
-      const data = await window.tradingAPI.getBreadthData(startDate, endDate)
-      setRecentData(data.slice(0, 10)) // Keep last 10 entries
+      if (allData && allData.length > 0) {
+        // Get the 10 most recent entries
+        setRecentData(allData.slice(0, 10))
 
-      // Update stats
-      const latestEntry = data[0]
-      setStats({
-        currentBreadthScore: latestEntry?.breadthScore || null,
-        marketPhase: latestEntry?.marketPhase || 'Unknown',
-        trendStrength: latestEntry?.trendStrength || null,
-        totalRecords: data.length,
-        lastUpdated: latestEntry?.date || null
-      })
+        // Update stats based on latest entry
+        const latestEntry = allData[0]
+        setStats({
+          currentBreadthScore: latestEntry?.breadthScore || null,
+          marketPhase: latestEntry?.marketPhase || 'Unknown',
+          trendStrength: latestEntry?.trendStrength || null,
+          totalRecords: allData.length,
+          lastUpdated: latestEntry?.date || null
+        })
+      } else {
+        // No data available
+        setStats({
+          currentBreadthScore: null,
+          marketPhase: 'No Data',
+          trendStrength: null,
+          totalRecords: 0,
+          lastUpdated: null
+        })
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
     } finally {
@@ -171,6 +187,18 @@ export function MarketBreadthDashboard() {
         {/* Header with navigation */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
+            {onNavigateHome && (
+              <>
+                <button
+                  onClick={onNavigateHome}
+                  className="flex items-center space-x-2 text-gray-600 hover:text-gray-800"
+                >
+                  <Home className="w-4 h-4" />
+                  <span className="font-medium">Home</span>
+                </button>
+                <span className="text-gray-400">/</span>
+              </>
+            )}
             <button
               onClick={() => setActiveView('dashboard')}
               className="flex items-center space-x-2 text-blue-600 hover:text-blue-700"
@@ -212,13 +240,30 @@ export function MarketBreadthDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Welcome Banner */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-6 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center space-x-3">
+              <BarChart3 className="w-9 h-9" />
+              <span>BIDBACK Trading Tool</span>
+            </h1>
+            <p className="text-blue-100 mt-2 text-lg">Market Breadth Analysis & Trading Management System</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-blue-100">System Status</p>
+            <p className="text-lg font-semibold flex items-center justify-end space-x-2">
+              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+              <span>Online</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
-            <BarChart3 className="w-7 h-7 text-blue-600" />
-            <span>Market Breadth Analysis</span>
-          </h1>
+          <h2 className="text-xl font-semibold text-gray-900">Market Breadth Analysis</h2>
           <p className="text-gray-600 mt-1">
             6-Factor Breadth Score Calculator & Historical Analysis
             {stats.lastUpdated && (

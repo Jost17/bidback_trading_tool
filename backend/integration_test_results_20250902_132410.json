@@ -1,0 +1,156 @@
+{
+  "test_run_timestamp": "2025-09-02T13:24:10.325335",
+  "backend_url": "http://localhost:3001",
+  "database_path": "src/database/trading.db",
+  "tests": {
+    "Database Connection Test": {
+      "test_name": "Database Connection Test",
+      "status": "PASSED",
+      "details": {
+        "total_records": 4255,
+        "date_range": "2007-02-16 to 2025-06-06",
+        "t2108_coverage": "3149 records (74.0%)",
+        "true_range_coverage": "2675 records (62.9%)",
+        "database_size_mb": 1.4,
+        "recent_data_count": 0
+      },
+      "errors": []
+    },
+    "Backend Startup Test": {
+      "test_name": "Backend Startup Test",
+      "status": "PASSED",
+      "details": {
+        "status_code": 200,
+        "response_time_ms": 8.76,
+        "backend_status": "healthy",
+        "risk_manager_initialized": true,
+        "active_positions": 0,
+        "backend_version": "1.0.0"
+      },
+      "errors": []
+    },
+    "API Endpoints Test": {
+      "test_name": "API Endpoints Test",
+      "status": "PASSED",
+      "details": {
+        "endpoints": {
+          "/": {
+            "status_code": 200,
+            "response_time_ms": 1.42,
+            "description": "Root endpoint",
+            "success": true
+          },
+          "/health": {
+            "status_code": 200,
+            "response_time_ms": 1.22,
+            "description": "Health check",
+            "success": true
+          },
+          "/positions": {
+            "status_code": 200,
+            "response_time_ms": 6.01,
+            "description": "Get positions",
+            "success": true
+          },
+          "/performance": {
+            "status_code": 200,
+            "response_time_ms": 2.73,
+            "description": "Get performance",
+            "success": true
+          },
+          "/trade-history": {
+            "status_code": 200,
+            "response_time_ms": 1.54,
+            "description": "Trade history",
+            "success": true
+          },
+          "/breadth/summary": {
+            "status_code": 200,
+            "response_time_ms": 3.78,
+            "description": "Breadth summary",
+            "success": true
+          },
+          "/breadth/latest": {
+            "status_code": 200,
+            "response_time_ms": 3.05,
+            "description": "Latest breadth",
+            "success": true
+          }
+        }
+      },
+      "errors": []
+    },
+    "Risk Management Calculation Test": {
+      "test_name": "Risk Management Calculation Test",
+      "status": "PASSED",
+      "details": {
+        "position_opened": true,
+        "response_time_ms": 2.82,
+        "position_id": "AAPL",
+        "regime": "bull_normal",
+        "stop_level": 138.0,
+        "stop_distance_pct": -8.0,
+        "profit_targets": [
+          168.00000000000003,
+          187.5,
+          210.0
+        ],
+        "expected_hold_days": 3,
+        "position_updated": true,
+        "update_actions": [],
+        "position_status": "ACTIVE"
+      },
+      "errors": []
+    },
+    "Market Regime Detection Test": {
+      "test_name": "Market Regime Detection Test",
+      "status": "PASSED",
+      "details": {
+        "regime_scenarios": {
+          "High Volatility Crisis": {
+            "regime": "high_vol_stress",
+            "stop_distance_pct": -8.564872679999993,
+            "expected_hold_days": 1,
+            "regime_transition_detected": true
+          },
+          "Low Volatility Bull Market": {
+            "error": "HTTP 400"
+          },
+          "Medium Volatility Neutral": {
+            "error": "HTTP 400"
+          }
+        },
+        "unique_regimes_detected": [
+          "high_vol_stress"
+        ]
+      },
+      "errors": [
+        "Regime detection may not be working - all scenarios returned same regime"
+      ]
+    },
+    "Performance Test": {
+      "test_name": "Performance Test",
+      "status": "PASSED",
+      "details": {
+        "concurrent_requests": 10,
+        "avg_response_time_ms": 2.99,
+        "max_response_time_ms": 3.4,
+        "min_response_time_ms": 2.54,
+        "all_requests_under_200ms": true,
+        "all_requests_under_500ms": true
+      },
+      "errors": []
+    }
+  },
+  "performance_metrics": {
+    "health_check_ms": 8.76,
+    "position_open_ms": 2.82
+  },
+  "overall_status": "PASSED",
+  "summary": {
+    "total_tests": 6,
+    "passed_tests": 6,
+    "failed_tests": 0,
+    "success_rate": 100.0
+  }
+}

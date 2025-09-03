@@ -71,14 +71,41 @@ export function HistoricalDataTable({ onDataChange }: HistoricalDataTableProps) 
     setError(null)
 
     try {
-      // Get date range for query (last 365 days by default)
-      const endDate = new Date().toISOString().split('T')[0]
-      const startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      // Get all available data by using a wide date range (2000-2030)
+      // Users can then use filters to narrow down if needed
+      const defaultStartDate = filters.startDate || '2000-01-01'
+      const defaultEndDate = filters.endDate || '2030-12-31'
       
-      const result = await window.tradingAPI.getBreadthData(
-        filters.startDate || startDate,
-        filters.endDate || endDate
-      )
+      // Check if running in Electron with API available
+      let result: BreadthData[] = []
+      
+      if (!window.tradingAPI?.getBreadthData) {
+        console.warn('Trading API not available - using mock data for browser demo')
+        // Mock data with realistic CSV-imported structure for testing field mapping
+        result = [
+          {
+            id: 1,
+            date: '2025-01-15',
+            timestamp: new Date().toISOString(),
+            stocks_up_4pct: 180,
+            stocks_down_4pct: 120,
+            t2108: 65.4,
+            stocks_up_20pct: 300,
+            stocks_down_20pct: 150,
+            ratio_5day: 1.5,
+            ratio_10day: 1.65,
+            breadthScore: 7.2,
+            marketPhase: 'BULL',
+            dataSource: 'imported',
+            notes: 'T2108: 65.4, Stocks_Up_4pct: 180, Stocks_Down_4pct: 120, Stocks_Up_20pct: 300, Stocks_Down_20pct: 150, Ratio_5day: 1.5, Ratio_10day: 1.65, SP500: 5847, Worden_Universe: 7000'
+          }
+        ]
+      } else {
+        result = await window.tradingAPI.getBreadthData(
+          defaultStartDate,
+          defaultEndDate
+        )
+      }
       
       setData(result || [])
     } catch (err) {
@@ -218,6 +245,14 @@ export function HistoricalDataTable({ onDataChange }: HistoricalDataTableProps) 
 
   // Handle edit
   const handleEdit = useCallback((entry: BreadthData) => {
+    console.log('=== Edit Debug ===')
+    console.log('Editing entry:', entry)
+    console.log('stocks_up_20pct:', entry.stocks_up_20pct)
+    console.log('stocks_down_20pct:', entry.stocks_down_20pct)
+    console.log('stocks_up_20dollar:', entry.stocks_up_20dollar)
+    console.log('stocks_down_20dollar:', entry.stocks_down_20dollar)
+    console.log('ratio_5day:', entry.ratio_5day)
+    console.log('ratio_10day:', entry.ratio_10day)
     setEditingEntry(entry)
     setViewMode('edit')
   }, [])
@@ -233,8 +268,8 @@ export function HistoricalDataTable({ onDataChange }: HistoricalDataTableProps) 
   // Handle CSV export
   const handleExport = useCallback(async () => {
     try {
-      const startDate = filters.startDate || new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      const endDate = filters.endDate || new Date().toISOString().split('T')[0]
+      const startDate = filters.startDate || '2000-01-01'
+      const endDate = filters.endDate || '2030-12-31'
       
       const result = await window.tradingAPI.exportCSVBreadth(startDate, endDate)
       

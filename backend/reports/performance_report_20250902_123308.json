@@ -1,0 +1,74 @@
+{
+  "summary": {
+    "total_trades": 0,
+    "total_return_pct": 0,
+    "avg_return_per_trade": 0,
+    "win_rate": 0,
+    "max_win": 0,
+    "max_loss": 0,
+    "current_drawdown": 0,
+    "sharpe_ratio": 0,
+    "active_positions": 1,
+    "annualized_roi": 0
+  },
+  "trade_history": [
+    {
+      "timestamp": "2025-09-02T12:33:08.790253",
+      "action": "POSITION_OPENED",
+      "symbol": "DEMO",
+      "entry_price": 45.5,
+      "regime": "bull_normal",
+      "vix": 22.3,
+      "stop_level": 41.86,
+      "profit_targets": [
+        50.96000000000001,
+        56.875,
+        63.699999999999996
+      ],
+      "adjustments_applied": "none"
+    }
+  ],
+  "active_positions": {
+    "DEMO": {
+      "symbol": "DEMO",
+      "entry_price": 45.5,
+      "entry_date": "2025-09-02T12:33:08.790241",
+      "position_size": 100.0,
+      "regime_at_entry": "bull_normal",
+      "stop_level": 41.86,
+      "profit_levels": [
+        50.96000000000001,
+        56.875,
+        63.699999999999996
+      ],
+      "remaining_position": 100.0,
+      "realized_pnl": 0.0,
+      "days_held": 1
+    }
+  },
+  "config": {
+    "position_sizing": {
+      "max_position_size": 100.0,
+      "risk_per_trade": 2.0,
+      "max_correlation_exposure": 10.0
+    },
+    "regime_overrides": {
+      "force_regime": null,
+      "disable_transitions": false,
+      "emergency_protocols": true
+    },
+    "performance_targets": {
+      "target_roi": 400.0,
+      "max_drawdown_tolerance": 15.0,
+      "min_sharpe_ratio": 2.0,
+      "min_win_rate": 0.6
+    },
+    "risk_limits": {
+      "max_stop_distance": 25.0,
+      "min_stop_distance": 2.0,
+      "max_profit_target": 100.0,
+      "position_concentration_limit": 20.0
+    }
+  },
+  "generated_at": "2025-09-02T12:33:08.801084"
+}

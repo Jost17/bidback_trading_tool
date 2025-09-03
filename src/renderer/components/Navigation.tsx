@@ -1,9 +1,9 @@
 import React from 'react'
-import { BarChart3, BookOpen, TrendingUp, Settings, Menu } from 'lucide-react'
+import { BarChart3, BookOpen, TrendingUp, Settings, Menu, Shield } from 'lucide-react'
 
 interface NavigationProps {
-  currentView: 'market-breadth' | 'trade-journal' | 'trading' | 'settings'
-  onViewChange: (view: 'market-breadth' | 'trade-journal' | 'trading' | 'settings') => void
+  currentView: 'market-breadth' | 'trade-journal' | 'trading' | 'risk-management' | 'settings'
+  onViewChange: (view: 'market-breadth' | 'trade-journal' | 'trading' | 'risk-management' | 'settings') => void
 }
 
 export function Navigation({ currentView, onViewChange }: NavigationProps) {
@@ -27,6 +27,12 @@ export function Navigation({ currentView, onViewChange }: NavigationProps) {
       description: 'IB Integration & Orders'
     },
     {
+      id: 'risk-management' as const,
+      label: 'Risk Management',
+      icon: Shield,
+      description: 'Regime Analysis & Risk Control'
+    },
+    {
       id: 'settings' as const,
       label: 'Settings',
       icon: Settings,
@@ -35,7 +41,32 @@ export function Navigation({ currentView, onViewChange }: NavigationProps) {
   ]
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
+    <div>
+      {/* Status Bar */}
+      <div className="bg-gray-800 text-white px-4 py-1 text-xs flex justify-between items-center">
+        <div className="flex space-x-4">
+          <span>BIDBACK Trading Tool v{(window as any).versions?.app || '1.0.0'}</span>
+          <span>•</span>
+          <span>Electron v{(window as any).versions?.electron || 'Unknown'}</span>
+          <span>•</span>
+          <span className="text-green-400">● Connected</span>
+          {currentView === 'risk-management' && (
+            <>
+              <span>•</span>
+              <span className="text-blue-400">Python Backend Ready</span>
+            </>
+          )}
+        </div>
+        
+        <div className="flex space-x-4">
+          <span>{(window as any).platform?.os || 'Unknown OS'}</span>
+          <span>•</span>
+          <span>{new Date().toLocaleTimeString()}</span>
+        </div>
+      </div>
+      
+      {/* Main Navigation */}
+      <nav className="bg-white shadow-sm border-b border-gray-200">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo and Brand */}
@@ -125,6 +156,7 @@ export function Navigation({ currentView, onViewChange }: NavigationProps) {
           })}
         </div>
       </div>
-    </nav>
+      </nav>
+    </div>
   )
 }
