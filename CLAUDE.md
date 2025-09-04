@@ -225,8 +225,33 @@ Das BIDBACK Trading Tool ist eine professionelle Desktop-Trading-Management-Anwe
 - **TJS_Elite Excel**: Als Inspiration für Journaling-Features, nicht als direkte Datenquelle
 - **Dokumentation**: Jede Phase wird vollständig dokumentiert bevor zur nächsten übergegangen wird
 
+## Bekannte Probleme & Optimierungen
+
+### 🔴 Kritische Bugs
+1. **Breadth Score Calculation Error**
+   - Problem: "Failed to calculate breadth score" auch wenn alle Felder ausgefüllt sind
+   - Betrifft: Market Breadth Data Entry mit VIX und 20%/$20 Feldern
+   - Status: In Bearbeitung (2025-09-04)
+
+### 🟡 UI/UX Optimierungen
+1. **Zeitfilter funktionieren nicht korrekt**
+   - Bei Auswahl von "90 Days" oder "1 Year" werden dieselben Daten angezeigt (20. Aug - 3. Sep)
+   - Die Zeitfilter-Buttons ändern nicht den Datenzeitraum im Chart
+   - Status: Offen
+   
+2. **Redundante Zeitfilter-Buttons**
+   - Zwei Sets von Zeitfiltern vorhanden (oben rechts: "30D | 90D | 1Y" + unten links: "7 Days | 30 Days | 90 Days | 1 Year | All Time")
+   - Nur ein Set wird benötigt
+   - Status: Offen
+
+### ✅ Erledigte Fixes
+- "BIDBACK" → "Bidback" in allen Komponenten (2025-09-04)
+- HTML5 Input-Validierung entfernt (step, min, max Attribute) (2025-09-04)
+- T2108 Validierungsfehler behoben (2025-09-04)
+
 ---
 
 **Erstellt am:** 2025-08-25
-**Status:** Bereit zur Implementierung
-**Nächster Schritt:** Phase 1 mit `electron-pro` Agent starten
+**Letzte Aktualisierung:** 2025-09-04
+**Status:** In aktiver Entwicklung
+**Nächster Schritt:** Breadth Score Calculation Error beheben
