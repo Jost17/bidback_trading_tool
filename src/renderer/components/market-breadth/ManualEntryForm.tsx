@@ -236,7 +236,7 @@ export function ManualEntryForm({ onSave, initialData, onCancel }: ManualEntryFo
               </label>
               <input
                 type="number"
-                step="0.01"
+                // Removed step constraint for flexible entry
                 value={formData.upVolume}
                 onChange={(e) => handleInputChange('upVolume', Number(e.target.value))}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
@@ -252,7 +252,7 @@ export function ManualEntryForm({ onSave, initialData, onCancel }: ManualEntryFo
               </label>
               <input
                 type="number"
-                step="0.01"
+                // Removed step constraint for flexible entry
                 value={formData.downVolume}
                 onChange={(e) => handleInputChange('downVolume', Number(e.target.value))}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
@@ -305,9 +305,7 @@ export function ManualEntryForm({ onSave, initialData, onCancel }: ManualEntryFo
               </label>
               <input
                 type="number"
-                step="0.1"
-                min="0"
-                max="100"
+                // Removed HTML5 validation constraints for flexible VIX input
                 value={formData.t2108}
                 onChange={(e) => handleInputChange('t2108', Number(e.target.value))}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
@@ -365,7 +363,7 @@ export function ManualEntryForm({ onSave, initialData, onCancel }: ManualEntryFo
                 </label>
                 <input
                   type="number"
-                  step="0.01"
+                  // Removed step constraint for flexible entry
                   value={formData.spReference}
                   onChange={(e) => handleInputChange('spReference', Number(e.target.value))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"

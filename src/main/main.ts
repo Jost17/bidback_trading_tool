@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'node:path'
-import { setupTradingHandlers } from './ipc-handlers'
+import { setupTradingHandlers, setupFallbackHandlers } from './ipc-handlers'
 import { TradingDatabase } from '../database/connection'
 
 // Keep a global reference of the window object
@@ -27,17 +27,42 @@ function createWindow(): void {
     show: false // Don't show until ready-to-show
   })
 
-  // Initialize database
+  // Initialize database with enhanced error handling
   try {
-    database = new TradingDatabase()
-    console.log('Trading database initialized successfully')
+    // Use the main database which now has all migrated historical data
+    const mainDbPath = path.join(process.cwd(), 'trading.db')
+    console.log('Connecting to main database at:', mainDbPath)
+    
+    database = new TradingDatabase(mainDbPath)
+    console.log('Connected to main database successfully')
+    
+    // Verify database is actually working
+    const dbInfo = database.getDatabaseInfo()
+    console.log('Database info:', dbInfo)
+    
+    // Setup IPC handlers with successful database
+    setupTradingHandlers(ipcMain, database)
   } catch (error) {
     console.error('Failed to initialize database:', error)
-  }
-
-  // Setup IPC handlers
-  if (database) {
-    setupTradingHandlers(ipcMain, database)
+    console.error('Error details:', error instanceof Error ? error.stack : error)
+    
+    // Attempt database recovery or create new database
+    try {
+      console.log('Attempting database recovery...')
+      
+      // Try to create database in a different location if needed
+      const fallbackPath = path.join(process.cwd(), 'trading-fallback.db')
+      database = new TradingDatabase(fallbackPath)
+      
+      console.log('Database recovery successful, using fallback database')
+      setupTradingHandlers(ipcMain, database)
+      
+    } catch (recoveryError) {
+      console.error('Database recovery failed:', recoveryError)
+      
+      // Setup enhanced fallback handlers that still allow basic functionality
+      setupFallbackHandlers(ipcMain)
+    }
   }
 
   // Load the app

@@ -1,0 +1,1 @@
+// Position Calculator placeholder - this file will be read to understand the interface

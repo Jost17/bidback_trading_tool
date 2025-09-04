@@ -2,8 +2,8 @@ import React from 'react'
 import { BarChart3, BookOpen, TrendingUp, Settings, Menu, Shield } from 'lucide-react'
 
 interface NavigationProps {
-  currentView: 'market-breadth' | 'trade-journal' | 'trading' | 'risk-management' | 'settings'
-  onViewChange: (view: 'market-breadth' | 'trade-journal' | 'trading' | 'risk-management' | 'settings') => void
+  currentView: 'market-breadth' | 'trade-journal' | 'trading-operations' | 'risk-management' | 'settings'
+  onViewChange: (view: 'market-breadth' | 'trade-journal' | 'trading-operations' | 'risk-management' | 'settings') => void
 }
 
 export function Navigation({ currentView, onViewChange }: NavigationProps) {
@@ -21,10 +21,10 @@ export function Navigation({ currentView, onViewChange }: NavigationProps) {
       description: 'Trade Management & P&L'
     },
     {
-      id: 'trading' as const,
-      label: 'Live Trading',
+      id: 'trading-operations' as const,
+      label: 'Trading Operations',
       icon: TrendingUp,
-      description: 'IB Integration & Orders'
+      description: 'Position Sizing & Trade Entry'
     },
     {
       id: 'risk-management' as const,
@@ -45,7 +45,7 @@ export function Navigation({ currentView, onViewChange }: NavigationProps) {
       {/* Status Bar */}
       <div className="bg-gray-800 text-white px-4 py-1 text-xs flex justify-between items-center">
         <div className="flex space-x-4">
-          <span>BIDBACK Trading Tool v{(window as any).versions?.app || '1.0.0'}</span>
+          <span>Bidback Trading Tool v{(window as any).versions?.app || '1.0.0'}</span>
           <span>•</span>
           <span>Electron v{(window as any).versions?.electron || 'Unknown'}</span>
           <span>•</span>
@@ -76,7 +76,7 @@ export function Navigation({ currentView, onViewChange }: NavigationProps) {
                 <TrendingUp className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">BIDBACK</h1>
+                <h1 className="text-xl font-bold text-gray-900">Bidback</h1>
                 <p className="text-xs text-gray-500 -mt-1">Trading Tool</p>
               </div>
             </div>

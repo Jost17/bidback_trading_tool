@@ -206,8 +206,15 @@ export class SixFactorAlgorithm implements AlgorithmImplementation {
   /**
    * Parse S&P 500 level from various string formats
    */
-  private parseS500Level(sp500Str?: string): number {
+  private parseS500Level(sp500Str?: string | number): number {
     if (!sp500Str) return 0;
+    
+    // Handle numeric input directly
+    if (typeof sp500Str === 'number') {
+      return sp500Str;
+    }
+    
+    // Handle string input with cleaning
     const cleaned = sp500Str.replace(/[",]/g, '');
     return parseFloat(cleaned) || 0;
   }

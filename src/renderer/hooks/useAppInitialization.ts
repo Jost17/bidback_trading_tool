@@ -18,7 +18,7 @@ export function useAppInitialization(): UseAppInitializationReturn {
         setInitializationProgress('Checking Trading API...')
         
         // Temporarily skip API check for browser demo
-        const isElectron = window.electronAPI || window.tradingAPI
+        const isElectron = (window as any).tradingAPI
         if (!isElectron) {
           console.warn('Running in browser demo mode - skipping API checks')
           setInitializationProgress('Browser demo mode - Ready!')
@@ -27,7 +27,7 @@ export function useAppInitialization(): UseAppInitializationReturn {
           return
         }
         
-        if (!window.tradingAPI) {
+        if (!(window as any).tradingAPI) {
           throw new Error('Trading API not available')
         }
         
@@ -35,7 +35,7 @@ export function useAppInitialization(): UseAppInitializationReturn {
         
         // Step 2: Test database connection
         setInitializationProgress('Connecting to database...')
-        const dbInfo = await window.tradingAPI.getDatabaseInfo()
+        const dbInfo = await (window as any).tradingAPI.getDatabaseInfo()
         console.log('Database info:', dbInfo)
         
         await new Promise(resolve => setTimeout(resolve, 500))
@@ -43,9 +43,13 @@ export function useAppInitialization(): UseAppInitializationReturn {
         // Step 3: Load initial data
         setInitializationProgress('Loading application data...')
         try {
-          // Try to load some initial breadth data to test the connection
-          const breadthData = await window.tradingAPI.getBreadthData()
-          console.log('Initial breadth data loaded:', breadthData.length, 'records')
+          // Check if tradingAPI is available
+          if ((window as any).tradingAPI?.getBreadthData) {
+            const breadthData = await (window as any).tradingAPI.getBreadthData()
+            console.log('Initial breadth data loaded:', breadthData.length, 'records')
+          } else {
+            console.warn('TradingAPI not yet available, skipping initial data load')
+          }
         } catch (breadthError) {
           console.warn('No breadth data available yet:', breadthError)
         }

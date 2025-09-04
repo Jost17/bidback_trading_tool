@@ -475,91 +475,54 @@ export class BreadthScoreCalculator {
    * Standardize raw breadth data for consistent algorithm input
    */
   public standardizeData(rawData: RawMarketBreadthData): StandardizedBreadthData {
-    const { FIELD_PRIORITY_MAP } = require('../types/breadth-raw-data');
-    
-    const standardized: Partial<StandardizedBreadthData> = {};
     const missingFields: string[] = [];
 
-    // Map fields using priority order
-    for (const [standardField, priorityFields] of Object.entries(FIELD_PRIORITY_MAP)) {
-      let value: any = undefined;
+    // Basic required fields
+    const standardized: StandardizedBreadthData = {
+      date: rawData.date,
+      timestamp: rawData.timestamp || new Date().toISOString(),
       
-      for (const field of priorityFields) {
-        if (rawData.hasOwnProperty(field) && rawData[field as keyof RawMarketBreadthData] !== undefined) {
-          value = rawData[field as keyof RawMarketBreadthData];
-          break;
-        }
-      }
+      // Primary indicators (prefer new fields, fallback to legacy)
+      stocksUp4Pct: rawData.stocksUp4PctDaily || rawData.advancingIssues || 0,
+      stocksDown4Pct: rawData.stocksDown4PctDaily || rawData.decliningIssues || 0,
+      stocksUp25PctQuarterly: rawData.stocksUp25PctQuarterly || 0,
+      stocksDown25PctQuarterly: rawData.stocksDown25PctQuarterly || 0,
       
-      if (value !== undefined) {
-        if (standardField === 'sp500Level' && typeof value === 'string') {
-          // Parse S&P 500 level from string format
-          const cleaned = value.replace(/[",]/g, '');
-          standardized[standardField as keyof StandardizedBreadthData] = parseFloat(cleaned) || 0;
-        } else {
-          standardized[standardField as keyof StandardizedBreadthData] = typeof value === 'number' ? value : Number(value) || 0;
-        }
-      } else {
-        missingFields.push(standardField);
-      }
-    }
+      // Secondary indicators
+      stocksUp25PctMonthly: rawData.stocksUp25PctMonthly || 0,
+      stocksDown25PctMonthly: rawData.stocksDown25PctMonthly || 0,
+      stocksUp50PctMonthly: rawData.stocksUp50PctMonthly || 0,
+      stocksDown50PctMonthly: rawData.stocksDown50PctMonthly || 0,
+      stocksUp13Pct34Days: rawData.stocksUp13Pct34Days || 0,
+      stocksDown13Pct34Days: rawData.stocksDown13Pct34Days || 0,
+      
+      // Legacy breadth data
+      advancingIssues: rawData.advancingIssues || rawData.stocksUp4PctDaily || 0,
+      decliningIssues: rawData.decliningIssues || rawData.stocksDown4PctDaily || 0,
+      newHighs: rawData.newHighs || 0,
+      newLows: rawData.newLows || 0,
+      upVolume: rawData.upVolume || 0,
+      downVolume: rawData.downVolume || 0,
+      
+      // Reference data
+      wordenUniverse: rawData.wordenUniverse || 0,
+      t2108: rawData.t2108 || 50,
+      sp500Level: this.parseS500Level(rawData.sp500Level),
+      vix: rawData.vix || rawData.vixLevel,
+      
+      // Data quality metrics  
+      dataQuality: rawData.dataQualityScore || 100,
+      missingFields: []
+    };
 
     // Add sector data if available
     if (this.hasSectorData(rawData)) {
       standardized.sectors = this.extractSectorData(rawData);
     }
 
-    // Calculate data quality score
-    const totalExpectedFields = Object.keys(FIELD_PRIORITY_MAP).length;
-    const presentFields = totalExpectedFields - missingFields.length;
-    const dataQuality = Math.round((presentFields / totalExpectedFields) * 100);
-
-    return {
-      ...standardized,
-      missingFields,
-      dataQuality
-    } as StandardizedBreadthData;
+    return standardized;
   }
 
-  /**
-   * Check if raw data contains sector information
-   */
-  private hasSectorData(rawData: RawMarketBreadthData): boolean {
-    const sectorFields = [
-      'basicMaterialsSector',
-      'consumerCyclicalSector',
-      'financialServicesSector',
-      'realEstateSector',
-      'consumerDefensiveSector',
-      'healthcareSector',
-      'utilitiesSector',
-      'communicationServicesSector',
-      'energySector',
-      'industrialsSector',
-      'technologySector'
-    ];
-
-    return sectorFields.some(field => rawData[field as keyof RawMarketBreadthData] !== undefined);
-  }
-
-  /**
-   * Extract sector data from raw breadth data
-   */
-  private extractSectorData(rawData: RawMarketBreadthData) {
-    return {
-      basicMaterials: rawData.basicMaterialsSector || 0,
-      consumerCyclical: rawData.consumerCyclicalSector || 0,
-      financialServices: rawData.financialServicesSector || 0,
-      realEstate: rawData.realEstateSector || 0,
-      consumerDefensive: rawData.consumerDefensiveSector || 0,
-      healthcare: rawData.healthcareSector || 0,
-      utilities: rawData.utilitiesSector || 0,
-      communicationServices: rawData.communicationServicesSector || 0,
-      energy: rawData.energySector || 0,
-      industrials: rawData.industrialsSector || 0,
-      technology: rawData.technologySector || 0
-    };
-  }
 
   /**
    * Get performance metrics
@@ -669,61 +632,6 @@ export class BreadthScoreCalculator {
     return await this.configManager.listConfigs(true);
   }
 
-  /**
-   * Standardize raw breadth data for consistent algorithm input
-   */
-  public standardizeData(rawData: RawMarketBreadthData): StandardizedBreadthData {
-    const standardized: Partial<StandardizedBreadthData> = {};
-    const missingFields: string[] = [];
-
-    // Basic required fields
-    standardized.date = rawData.date;
-    standardized.timestamp = rawData.timestamp || new Date().toISOString();
-
-    // Primary indicators with fallback logic
-    standardized.stocksUp4Pct = rawData.stocksUp4PctDaily || rawData.advancingIssues || 0;
-    standardized.stocksDown4Pct = rawData.stocksDown4PctDaily || rawData.decliningIssues || 0;
-    standardized.stocksUp25PctQuarterly = rawData.stocksUp25PctQuarterly || 0;
-    standardized.stocksDown25PctQuarterly = rawData.stocksDown25PctQuarterly || 0;
-
-    // Secondary indicators
-    standardized.stocksUp25PctMonthly = rawData.stocksUp25PctMonthly || 0;
-    standardized.stocksDown25PctMonthly = rawData.stocksDown25PctMonthly || 0;
-    standardized.stocksUp50PctMonthly = rawData.stocksUp50PctMonthly || 0;
-    standardized.stocksDown50PctMonthly = rawData.stocksDown50PctMonthly || 0;
-    standardized.stocksUp13Pct34Days = rawData.stocksUp13Pct34Days || 0;
-    standardized.stocksDown13Pct34Days = rawData.stocksDown13Pct34Days || 0;
-
-    // Legacy breadth data
-    standardized.advancingIssues = rawData.advancingIssues || rawData.stocksUp4PctDaily || 0;
-    standardized.decliningIssues = rawData.decliningIssues || rawData.stocksDown4PctDaily || 0;
-    standardized.newHighs = rawData.newHighs || 0;
-    standardized.newLows = rawData.newLows || 0;
-    standardized.upVolume = rawData.upVolume || 0;
-    standardized.downVolume = rawData.downVolume || 0;
-
-    // Reference data
-    standardized.wordenUniverse = rawData.wordenUniverse || 0;
-    standardized.t2108 = rawData.t2108 || 50;
-    standardized.sp500Level = this.parseS500Level(rawData.sp500Level);
-
-    // Sector data
-    if (this.hasSectorData(rawData)) {
-      standardized.sectors = this.extractSectorData(rawData);
-    }
-
-    // Data quality assessment
-    const expectedFields = ['advancingIssues', 'decliningIssues', 'newHighs', 'newLows', 'upVolume', 'downVolume', 't2108'];
-    const presentFields = expectedFields.filter(field => {
-      const value = rawData[field as keyof RawMarketBreadthData];
-      return value !== undefined && value !== null;
-    });
-
-    standardized.dataQuality = Math.round((presentFields.length / expectedFields.length) * 100);
-    standardized.missingFields = expectedFields.filter(field => !presentFields.includes(field));
-
-    return standardized as StandardizedBreadthData;
-  }
 
   /**
    * Parse S&P 500 level from string format

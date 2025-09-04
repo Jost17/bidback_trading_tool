@@ -33,6 +33,7 @@ export interface BreadthData {
   worden_universe?: number | null
   t2108?: number | null
   sp500?: string | null
+  vix?: number | null
   
   // Sector Data
   basic_materials_sector?: number | null
@@ -88,6 +89,8 @@ export interface MarketDataInput {
   stocks_down_20pct: string
   stocks_up_20dollar: string
   stocks_down_20dollar: string
+  // VIX field (CRITICAL FOR DATA PERSISTENCE)
+  vix: string
   // Legacy fields for compatibility
   worden_universe?: string
   sp500?: string
@@ -143,6 +146,222 @@ export interface BreadthCalculation {
   breadthScore: number
   trendStrength: number
   marketPhase: string
+}
+
+// Bidback Position Management Types
+export interface PortfolioSettings {
+  id?: number
+  portfolioSize: number
+  baseSizePercentage: number
+  maxHeatPercentage: number
+  maxPositions: number
+  tradingSetups: TradingSetup[]
+  riskPerTrade: number
+  useKellySizing: boolean
+  enablePositionScaling: boolean
+  lastUpdated: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface TradingSetup {
+  id: string
+  name: string
+  description: string
+  isActive: boolean
+  positionSizeMultiplier?: number
+  riskMultiplier?: number
+}
+
+export type VIXLevel = 'ultra-low' | 'low' | 'normal' | 'elevated' | 'high' | 'extreme'
+
+export interface VIXMultiplier {
+  level: VIXLevel
+  range: string
+  multiplier: number
+}
+
+export interface BreadthMultiplier {
+  condition: string
+  multiplier: number
+  resultingPosition: number
+}
+
+export interface PositionCalculation {
+  basePosition: number
+  vixMultiplier: number
+  breadthMultiplier: number
+  finalPosition: number
+  portfolioHeatPercent: number
+  bigOpportunity: boolean
+  avoidEntry: boolean
+}
+
+export interface Position {
+  id?: number
+  symbol: string
+  entryDate: string
+  entryPrice: number
+  positionSize: number
+  vixAtEntry: number
+  
+  // Auto-calculated exits
+  stopLoss: number
+  profitTarget1: number  // 50% exit
+  profitTarget2: number  // full exit
+  timeExitDate: string   // Holiday adjusted
+  
+  // Position tracking
+  currentPrice?: number
+  positionAge: number
+  status: 'open' | 'partial' | 'closed'
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface PositionUpdate {
+  id?: number
+  positionId: number
+  date: string
+  price: number
+  performance: number
+  daysHeld: number
+}
+
+export interface ExitRecommendation {
+  positionId: number
+  action: 'hold' | 'reduce' | 'exit' | 'stop-loss' | 'take-profit'
+  reason: string
+  urgency: 'low' | 'medium' | 'high'
+  percentToExit?: number
+}
+
+export interface MarketSignals {
+  bigOpportunity: boolean      // T2108 < 20 + Up 4% > 1000
+  avoidEntry: boolean         // Up 4% < 150, etc.
+  positionDeterioration: number // Avoid score
+  vixRegime: VIXLevel
+  breadthStrength: 'weak' | 'moderate' | 'strong'
+}
+
+// Order Management System Types
+export interface PlannedTrade {
+  id?: number
+  symbol: string
+  entryPrice: number
+  plannedPositionSize: number
+  calculatedPositionSize: number  // From Bidback calculator
+  
+  // Market conditions at planning time
+  t2108AtPlanning: number
+  vixAtPlanning: number
+  up4pctAtPlanning: number
+  down4pctAtPlanning: number
+  
+  // Calculated exits (VIX-based)
+  stopLoss: number
+  profitTarget1: number  // 50% exit
+  profitTarget2: number  // Full exit
+  timeExitDate: string   // Holiday-adjusted
+  
+  // Bidback signals
+  isBigOpportunity: boolean
+  avoidEntry: boolean
+  portfolioHeatPercent: number
+  
+  // Status tracking
+  status: 'planned' | 'ordered' | 'filled' | 'cancelled'
+  createdAt: string
+  updatedAt?: string
+  notes?: string
+}
+
+export interface Order {
+  id?: number
+  plannedTradeId?: number
+  symbol: string
+  orderType: 'buy' | 'sell'
+  orderStyle: 'market' | 'limit' | 'stop' | 'stop-limit'
+  quantity: number
+  limitPrice?: number
+  stopPrice?: number
+  
+  // Order execution
+  status: 'pending' | 'submitted' | 'filled' | 'cancelled' | 'rejected'
+  fillPrice?: number
+  fillQuantity?: number
+  fillDate?: string
+  
+  // Timestamps
+  createdAt: string
+  submittedAt?: string
+  filledAt?: string
+  cancelledAt?: string
+  
+  // Order metadata
+  brokerOrderId?: string
+  commission?: number
+  notes?: string
+}
+
+export interface OpenPosition {
+  id?: number
+  symbol: string
+  entryDate: string
+  entryPrice: number
+  quantity: number
+  currentPrice?: number
+  
+  // Original Bidback calculation context
+  originalCalculation: {
+    basePosition: number
+    vixMultiplier: number
+    breadthMultiplier: number
+    finalPosition: number
+    bigOpportunity: boolean
+    avoidEntry: boolean
+  }
+  
+  // Market conditions at entry
+  marketConditionsAtEntry: {
+    t2108: number
+    vix: number
+    up4pct: number
+    down4pct: number
+    marketPhase: string
+  }
+  
+  // Exit targets (calculated at entry, VIX-based)
+  exitTargets: {
+    stopLoss: number
+    profitTarget1: number  // 50% exit
+    profitTarget2: number  // Full exit
+    timeExitDate: string   // Holiday-adjusted maximum hold
+  }
+  
+  // Position performance
+  unrealizedPL?: number
+  unrealizedPLPercent?: number
+  positionAge: number  // Trading days
+  
+  // Exit tracking
+  status: 'open' | 'partial' | 'closed'
+  partialExits?: {
+    date: string
+    quantity: number
+    price: number
+    reason: string
+  }[]
+  
+  // Position deterioration signals
+  deteriorationSignals: {
+    avoidSignalActive: boolean
+    deteriorationScore: number
+    recommendation: 'hold' | 'reduce' | 'exit'
+  }
+  
+  createdAt: string
+  updatedAt?: string
 }
 
 // Enhanced Market Condition interface (integrated)
@@ -637,6 +856,11 @@ declare global {
       // Database Management API
       backupDatabase: () => Promise<BackupResult>
       getDatabaseInfo: () => Promise<DatabaseInfo>
+      
+      // Portfolio Settings API
+      getPortfolioSettings: () => Promise<PortfolioSettings>
+      savePortfolioSettings: (settings: Omit<PortfolioSettings, 'id' | 'createdAt' | 'updatedAt'>) => Promise<number>
+      resetPortfolioSettings: () => Promise<number>
       
       // IB Integration API
       connectIB: () => Promise<IBConnection>

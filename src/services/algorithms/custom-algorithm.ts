@@ -348,9 +348,9 @@ export class CustomAlgorithm implements AlgorithmImplementation {
    */
   private fallbackCalculation(context: FormulaContext): number {
     // Simple balanced calculation as fallback
-    return (context.primary * 0.4) + 
-           (context.secondary * 0.35) + 
-           (context.reference * 0.25);
+    return ((context.primary || 0) * 0.4) + 
+           ((context.secondary || 0) * 0.35) + 
+           ((context.reference || 0) * 0.25);
   }
 
   /**
@@ -360,9 +360,9 @@ export class CustomAlgorithm implements AlgorithmImplementation {
     const weights = config.weights;
     
     return {
-      primary_score: context.primary * weights.primary_indicators,
-      secondary_score: context.secondary * weights.secondary_indicators,
-      reference_score: context.reference * weights.reference_data,
+      primary_score: (context.primary || 0) * weights.primary_indicators,
+      secondary_score: (context.secondary || 0) * weights.secondary_indicators,
+      reference_score: (context.reference || 0) * weights.reference_data,
       sector_score: (context.sector || 50) * weights.sector_data
     };
   }

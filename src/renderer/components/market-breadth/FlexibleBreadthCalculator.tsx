@@ -236,8 +236,7 @@ const FlexibleBreadthCalculator: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">T2108</label>
               <input
                 type="number"
-                min="0"
-                max="100"
+                // Removed HTML5 validation constraints for flexible T2108 input
                 value={testData.t2108 || ''}
                 onChange={(e) => updateTestData('t2108', parseFloat(e.target.value) || 0)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
@@ -268,7 +267,7 @@ const FlexibleBreadthCalculator: React.FC = () => {
                 value={testData.upVolume ? (testData.upVolume / 1000000000).toFixed(2) : ''}
                 onChange={(e) => updateTestData('upVolume', parseFloat(e.target.value) * 1000000000 || 0)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                step="0.1"
+                // Removed step constraint for flexible volume input
               />
             </div>
             <div>
@@ -278,7 +277,7 @@ const FlexibleBreadthCalculator: React.FC = () => {
                 value={testData.downVolume ? (testData.downVolume / 1000000000).toFixed(2) : ''}
                 onChange={(e) => updateTestData('downVolume', parseFloat(e.target.value) * 1000000000 || 0)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                step="0.1"
+                // Removed step constraint for flexible volume input
               />
             </div>
           </div>

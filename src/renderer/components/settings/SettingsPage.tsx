@@ -10,7 +10,7 @@ export function SettingsPage() {
           <Settings className="w-7 h-7 text-blue-600" />
           <span>Settings</span>
         </h1>
-        <p className="text-gray-600 mt-1">Configure your BIDBACK Trading Tool</p>
+        <p className="text-gray-600 mt-1">Configure your Bidback Trading Tool</p>
       </div>
 
       {/* Settings Sections */}
@@ -152,7 +152,7 @@ export function SettingsPage() {
           </div>
           
           <div className="space-y-2 text-sm text-gray-600">
-            <p><strong>BIDBACK Trading Tool</strong> v{window.versions?.app || '1.0.0'}</p>
+            <p><strong>Bidback Trading Tool</strong> v{window.versions?.app || '1.0.0'}</p>
             <p>Professional Desktop Trading Management Application</p>
             <p>Built with Electron v{window.versions?.electron || 'Unknown'}</p>
             <p>Node.js v{window.versions?.node || 'Unknown'}</p>

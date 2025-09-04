@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3'
 import type { BreadthData, BreadthCalculation, CSVImportResult, CSVExportResult } from '../../types/trading'
 import { DataRecoveryService, type RecoveryResult } from './data-recovery-service'
+import { BreadthDatabaseAdapter } from './breadth-adapter'
 
 // Database query result types
 interface SecondaryIndicatorRecord {
@@ -19,12 +20,14 @@ interface SecondaryIndicatorRecord {
 
 export class BreadthService {
   private insertBreadth: Database.Statement
-  private getBreadthByDate: Database.Statement
+  private getBreadthByDateStmt: Database.Statement
   private updateBreadthById: Database.Statement
   private deleteBreadthById: Database.Statement
   private getBreadthById: Database.Statement
+  private adapter: BreadthDatabaseAdapter
 
   constructor(private db: Database.Database) {
+    this.adapter = new BreadthDatabaseAdapter(db)
     // Prepared statements for better performance
     this.insertBreadth = db.prepare(`
       INSERT INTO market_breadth (
@@ -34,14 +37,15 @@ export class BreadthService {
         ratio_5day, ratio_10day, stocks_up_4pct, stocks_down_4pct,
         stocks_up_25pct_quarter, stocks_down_25pct_quarter, stocks_up_25pct_month, stocks_down_25pct_month,
         stocks_up_50pct_month, stocks_down_50pct_month, stocks_up_13pct_34days, stocks_down_13pct_34days,
-        worden_universe, t2108, sp500, source_file, import_format, data_quality_score
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        worden_universe, t2108, sp500, vix, source_file, import_format, data_quality_score
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
 
-    this.getBreadthByDate = db.prepare(`
+    this.getBreadthByDateStmt = db.prepare(`
       SELECT * FROM market_breadth 
-      WHERE date BETWEEN ? AND ? 
-      ORDER BY date DESC, timestamp DESC
+      WHERE date = ? 
+      ORDER BY timestamp DESC 
+      LIMIT 1
     `)
 
     this.updateBreadthById = db.prepare(`
@@ -62,93 +66,66 @@ export class BreadthService {
     // Calculate breadth score and market phase
     const calculation = this.calculateBreadthScore(data)
     
-    const info = this.insertBreadth.run(
-      data.date,
-      data.timestamp || new Date().toISOString(),
-      data.advancingIssues,
-      data.decliningIssues,
-      data.newHighs,
-      data.newLows,
-      data.upVolume,
-      data.downVolume,
-      calculation.breadthScore,
-      calculation.trendStrength,
-      calculation.marketPhase,
-      data.dataSource || 'manual',
-      data.notes || null,
-      // Match the column order in INSERT statement
-      data.stocks_up_20pct || null,
-      data.stocks_down_20pct || null,
-      data.stocks_up_20dollar || null,
-      data.stocks_down_20dollar || null,
-      data.ratio_5day || null,
-      data.ratio_10day || null,
-      data.stocks_up_4pct || null,
-      data.stocks_down_4pct || null,
-      data.stocks_up_25pct_quarter || null,
-      data.stocks_down_25pct_quarter || null,
-      data.stocks_up_25pct_month || null,
-      data.stocks_down_25pct_month || null,
-      data.stocks_up_50pct_month || null,
-      data.stocks_down_50pct_month || null,
-      data.stocks_up_13pct_34days || null,
-      data.stocks_down_13pct_34days || null,
-      data.worden_universe || null,
-      data.t2108 || null,
-      data.sp500 || null,
-      data.source_file || null,
-      data.import_format || null,
-      data.data_quality_score || null
-    )
+    // Merge calculation results into data
+    const enrichedData = {
+      ...data,
+      breadthScore: calculation.breadthScore,
+      trendStrength: calculation.trendStrength,
+      marketPhase: calculation.marketPhase,
+      timestamp: data.timestamp || new Date().toISOString(),
+      dataSource: data.dataSource || 'manual'
+    }
     
-    console.log(`Inserted breadth data, rowid: ${info.lastInsertRowid}`)
-    return Number(info.lastInsertRowid)
+    // Use adapter to handle both legacy and new schemas
+    const rowId = this.adapter.saveBreadthData(enrichedData)
+    
+    console.log(`Inserted breadth data via adapter, rowid: ${rowId}`)
+    return rowId
+  }
+
+  /**
+   * Upsert breadth data - insert new record or update existing one
+   * This method handles the duplicate entry issue by using proper UPSERT logic
+   */
+  upsertBreadthData(data: BreadthData): number {
+    console.log(`Starting UPSERT operation for date: ${data.date}`)
+    
+    // Calculate breadth score and market phase for the new/updated data
+    const calculation = this.calculateBreadthScore(data)
+    
+    // Merge calculation results into data
+    const enrichedData = {
+      ...data,
+      breadthScore: calculation.breadthScore,
+      trendStrength: calculation.trendStrength,
+      marketPhase: calculation.marketPhase,
+      timestamp: data.timestamp || new Date().toISOString(),
+      dataSource: data.dataSource || 'manual'
+    }
+    
+    // The adapter will handle existence check, data merging, and UPSERT operation
+    const rowId = this.adapter.saveBreadthData(enrichedData)
+    
+    console.log(`UPSERT operation completed for date: ${data.date}, rowid: ${rowId}`)
+    return rowId
   }
 
   getBreadthHistory(startDate: string, endDate: string): BreadthData[] {
-    const results = this.getBreadthByDate.all(startDate, endDate) as any[]
-    
-    return results.map(row => ({
-      id: row.id,
-      date: row.date,
-      timestamp: row.timestamp,
-      advancingIssues: row.advancing_issues,
-      decliningIssues: row.declining_issues,
-      newHighs: row.new_highs,
-      newLows: row.new_lows,
-      upVolume: row.up_volume,
-      downVolume: row.down_volume,
-      breadthScore: row.breadth_score,
-      trendStrength: row.trend_strength,
-      marketPhase: row.market_phase,
-      dataSource: row.data_source as 'manual' | 'imported' | 'api',
-      notes: row.notes,
-      // New fields for complete CSV data
-      stocks_up_4pct: row.stocks_up_4pct,
-      stocks_down_4pct: row.stocks_down_4pct,
-      stocks_up_25pct_quarter: row.stocks_up_25pct_quarter,
-      stocks_down_25pct_quarter: row.stocks_down_25pct_quarter,
-      stocks_up_25pct_month: row.stocks_up_25pct_month,
-      stocks_down_25pct_month: row.stocks_down_25pct_month,
-      stocks_up_50pct_month: row.stocks_up_50pct_month,
-      stocks_down_50pct_month: row.stocks_down_50pct_month,
-      stocks_up_13pct_34days: row.stocks_up_13pct_34days,
-      stocks_down_13pct_34days: row.stocks_down_13pct_34days,
-      stocks_up_20pct: row.stocks_up_20pct,
-      stocks_down_20pct: row.stocks_down_20pct,
-      stocks_up_20dollar: row.stocks_up_20dollar,
-      stocks_down_20dollar: row.stocks_down_20dollar,
-      ratio_5day: row.ratio_5day,
-      ratio_10day: row.ratio_10day,
-      worden_universe: row.worden_universe,
-      t2108: row.t2108,
-      sp500: row.sp500,
-      source_file: row.source_file,
-      import_format: row.import_format,
-      data_quality_score: row.data_quality_score,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    }))
+    // Use adapter to handle both legacy and new schemas
+    return this.adapter.getBreadthHistory(startDate, endDate)
+  }
+
+  getBreadthByDate(date: string): BreadthData | null {
+    try {
+      // Use the adapter's getBreadthHistory method with same date for start and end
+      const results = this.adapter.getBreadthHistory(date, date)
+      
+      // Return the first (and only) result or null
+      return results.length > 0 ? results[0] : null
+    } catch (error) {
+      console.error('Error getting breadth data by date:', error)
+      return null
+    }
   }
 
   updateBreadthData(id: number, data: Partial<BreadthData>): boolean {
@@ -539,8 +516,9 @@ export class BreadthService {
           // Expected: Date, up4%, down4%, 5day, 10day, up25%quarter, down25%quarter, up25%month, down25%month, up50%month, down50%month, up13%34day, down13%34day, worden, T2108, S&P
           
           // Enhanced error handling: ensure we have minimum required fields
+          // Make VIX and 20%/$20 fields optional - only require basic fields
           if (values.length < 3) {
-            errors.push(`Row ${i + 2}: Insufficient columns for Stockbee format (minimum: date, up4%, down4%)`)
+            errors.push(`Row ${i + 2}: Insufficient columns (minimum: date, up4%, down4%)`)
             errorCount++
             continue
           }
@@ -559,12 +537,19 @@ export class BreadthService {
           console.log(`SP500 raw value: "${sp500}"`)
           console.log(`Rest array contents:`, rest)
           
-          // Validate critical fields
+          // Validate critical fields - make T2108 and SP500 optional
           const validationErrors: string[] = []
           if (!date) validationErrors.push('Missing date')
-          if (isNaN(parseFloat(up4pct))) validationErrors.push('Invalid up4pct')
-          if (isNaN(parseFloat(t2108))) validationErrors.push('Invalid T2108')
-          if (!sp500 || sp500.trim() === '') validationErrors.push('Missing SP500')
+          if (!up4pct || isNaN(parseFloat(up4pct))) validationErrors.push('Invalid or missing up4pct')
+          if (!down4pct || isNaN(parseFloat(down4pct))) validationErrors.push('Invalid or missing down4pct')
+          
+          // T2108 and SP500 are now optional - warn but don't fail
+          if (t2108 && isNaN(parseFloat(t2108))) {
+            console.warn(`Row ${i + 2}: T2108 value "${t2108}" is not numeric, will use default`)
+          }
+          if (!sp500 || sp500.trim() === '') {
+            console.warn(`Row ${i + 2}: Missing SP500 value, will use null`)
+          }
           
           if (validationErrors.length > 0) {
             console.error(`Validation errors for row ${i + 2}:`, validationErrors)
@@ -641,31 +626,39 @@ export class BreadthService {
           breadthData = {
             date: parsedDate,
             timestamp: new Date(parsedDate + 'T16:00:00').toISOString(),
-            // Legacy compatibility (keep these) - use safe parsing with fallback to 0
-            advancingIssues: this.safeParseNumber(up4pct) || 0,
-            decliningIssues: this.safeParseNumber(down4pct) || 0,
-            newHighs: Math.round((this.safeParseNumber(up25quarter) || 0) / 10), // Scale down quarterly data
-            newLows: Math.round((this.safeParseNumber(down25quarter) || 0) / 10),
-            upVolume: this.safeParseNumber(up25month) || 0,
-            downVolume: this.safeParseNumber(down25month) || 0,
+            
+            // Legacy fields for compatibility - use quarterly data if available, fallback to 4pct data
+            advancingIssues: this.safeParseNumber(up25quarter) || this.safeParseNumber(up4pct) || 0,
+            decliningIssues: this.safeParseNumber(down25quarter) || this.safeParseNumber(down4pct) || 0,
+            newHighs: Math.round((this.safeParseNumber(up25month) || 0) / 10), // Scale down monthly data
+            newLows: Math.round((this.safeParseNumber(down25month) || 0) / 10),
+            upVolume: this.safeParseNumber(up50month) || 0,
+            downVolume: this.safeParseNumber(down50month) || 0,
             breadthScore: 0, // Will be calculated
             
-            // NEW: Map to correct schema columns with safe parsing
-            stocks_up_4pct: this.safeParseNumber(up4pct),
-            stocks_down_4pct: this.safeParseNumber(down4pct),
-            stocks_up_25pct_quarter: this.safeParseNumber(up25quarter),
-            stocks_down_25pct_quarter: this.safeParseNumber(down25quarter),
-            stocks_up_25pct_month: this.safeParseNumber(up25month),
-            stocks_down_25pct_month: this.safeParseNumber(down25month),
-            stocks_up_50pct_month: this.safeParseNumber(up50month),
-            stocks_down_50pct_month: this.safeParseNumber(down50month),
-            stocks_up_13pct_34days: this.safeParseNumber(up13day34),
-            stocks_down_13pct_34days: this.safeParseNumber(down13day34),
-            ratio_5day: this.safeParseNumber(ratio5day, 'float'),
-            ratio_10day: this.safeParseNumber(ratio10day, 'float'),
-            t2108: this.safeParseNumber(t2108, 'float'),
-            sp500: normalizedSP500 || null, // FIXED: Now single, normalized value
-            worden_universe: this.safeParseNumber(worden),
+            // Extended fields - all optional, gracefully handle missing data
+            stocks_up_4pct: this.safeParseNumber(up4pct) || 0, // Required field from CSV
+            stocks_down_4pct: this.safeParseNumber(down4pct) || 0, // Required field from CSV
+            stocks_up_25pct_quarter: this.safeParseNumber(up25quarter), // Optional
+            stocks_down_25pct_quarter: this.safeParseNumber(down25quarter), // Optional
+            stocks_up_25pct_month: this.safeParseNumber(up25month), // Optional
+            stocks_down_25pct_month: this.safeParseNumber(down25month), // Optional
+            stocks_up_50pct_month: this.safeParseNumber(up50month), // Optional
+            stocks_down_50pct_month: this.safeParseNumber(down50month), // Optional
+            stocks_up_13pct_34days: this.safeParseNumber(up13day34), // Optional
+            stocks_down_13pct_34days: this.safeParseNumber(down13day34), // Optional
+            ratio_5day: this.safeParseNumber(ratio5day, 'float'), // Optional
+            ratio_10day: this.safeParseNumber(ratio10day, 'float'), // Optional
+            t2108: this.safeParseNumber(t2108, 'float') || 50, // Default to neutral 50 if missing
+            sp500: normalizedSP500 || null, // Optional - can be null
+            worden_universe: this.safeParseNumber(worden) || 7000, // Default value
+            vix: null, // VIX is not in CSV - will be added manually later
+            
+            // 20% and $20 fields - not in standard CSV, will be added manually
+            stocks_up_20pct: null,
+            stocks_down_20pct: null,
+            stocks_up_20dollar: null,
+            stocks_down_20dollar: null,
             
             dataSource: 'imported',
             notes: this.buildComprehensiveNotes({
@@ -705,12 +698,8 @@ export class BreadthService {
           continue // Skip header rows or invalid dates
         }
 
-        // Check for duplicate
-        const existing = this.db.prepare(
-          'SELECT id FROM market_breadth WHERE date = ?'
-        ).get(breadthData.date)
-
-        if (existing) {
+        // Check for duplicate using adapter
+        if (this.adapter.checkForDuplicate(breadthData.date)) {
           duplicates.push(`${breadthData.date}`)
           skippedCount++
           continue

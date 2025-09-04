@@ -47,10 +47,12 @@ export interface RawMarketBreadthData {
   worden_universe?: number | null; // Total stocks tracked
   t2108?: number | null; // % Stocks above 40-day MA
   sp500?: string | null; // S&P 500 level (stored as text due to comma formatting)
+  vix?: number | null; // CBOE Volatility Index
   
   // Legacy fields for compatibility
   wordenUniverse?: number;
   sp500Level?: string;
+  vixLevel?: number;
   
   // Legacy Compatibility Fields (for migration)
   advancingIssues?: number;
@@ -141,6 +143,7 @@ export interface StandardizedBreadthData {
   wordenUniverse: number;
   t2108: number;
   sp500Level: number; // Parsed numeric value
+  vix?: number; // VIX volatility index (optional)
   
   // Sector data (optional)
   sectors?: {
@@ -190,7 +193,8 @@ export const FIELD_PRIORITY_MAP: Record<keyof StandardizedBreadthData, string[]>
   sp500Level: ['sp500', 'sp500Level', 'sp_500_level', 'spReference'],
   dataQuality: ['data_quality_score', 'dataQualityScore'],
   missingFields: ['missingFields'],
-  sectors: ['sectors']
+  sectors: ['sectors'],
+  vix: ['vix', 'vixLevel', 'vix_level']
 };
 
 /**
@@ -222,6 +226,7 @@ export const OPTIMAL_FIELDS = [
   'worden_universe',
   't2108',
   'sp500',
+  'vix',
   'advancingIssues',
   'decliningIssues',
   'newHighs',

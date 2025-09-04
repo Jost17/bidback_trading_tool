@@ -23,9 +23,10 @@ interface FormErrors {
 }
 
 export function DataEntryForm({ onSuccess, initialData }: DataEntryFormProps) {
-  // Enhanced CSV field mapping for all recovered data formats
+  const [preFilledFieldsLoaded, setPreFilledFieldsLoaded] = useState(false)
+  // Updated CSV field mapping after database migration - only fields that are actually in CSV
   const csvFieldMap: Record<string, string[]> = {
-    // 4% indicators  
+    // 4% indicators - NOW IN CSV AFTER MIGRATION
     'stocks_up_4pct': ['up4', 'up4%'],
     'stocks_down_4pct': ['down4', 'down4%'],
     
@@ -43,19 +44,22 @@ export function DataEntryForm({ onSuccess, initialData }: DataEntryFormProps) {
     'stocks_up_13pct_34days': ['up13-34', 'up13-34%', 'up13day34'],
     'stocks_down_13pct_34days': ['down13-34', 'down13-34%', 'down13day34'],
     
-    // 20% indicators
-    'stocks_up_20pct': ['up20', 'up20%'],
-    'stocks_down_20pct': ['down20', 'down20%'],
-    'stocks_up_20dollar': ['up20$', 'up$20'],
-    'stocks_down_20dollar': ['down20$', 'down$20'],
-    
     // Reference indicators
     't2108': ['T2108', 't2108'],
     'sp500': ['SP', 'sp500', 'S&P'],
     'worden_universe': ['worden', 'worden_universe'],
-    'ratio_5day': ['ratio5d', '5d'],
-    'ratio_10day': ['ratio10d', '10d']
+    'ratio_5day': ['ratio5d', '5d'],   // NOW IN CSV AFTER MIGRATION
+    'ratio_10day': ['ratio10d', '10d'] // NOW IN CSV AFTER MIGRATION
   }
+
+  // Manual entry only fields (NOT in CSV)
+  const manualOnlyFields: Set<keyof MarketDataInput> = new Set<keyof MarketDataInput>([
+    'stocks_up_20pct',    // Manual entry only
+    'stocks_down_20pct',  // Manual entry only  
+    'stocks_up_20dollar', // Manual entry only
+    'stocks_down_20dollar', // Manual entry only
+    'vix' // VIX is typically manual entry
+  ])
 
   // Legacy format mappings for existing database records
   const legacyFieldMap: Record<string, string[]> = {
@@ -335,6 +339,9 @@ export function DataEntryForm({ onSuccess, initialData }: DataEntryFormProps) {
       stocks_down_20pct: getFieldValue('stocks_down_20pct', data),
       stocks_up_20dollar: getFieldValue('stocks_up_20dollar', data),
       stocks_down_20dollar: getFieldValue('stocks_down_20dollar', data),
+      
+      // VIX field (CRITICAL FOR DATA PERSISTENCE)
+      vix: getFieldValue('vix', data),
     }
     
     // Enhanced debugging and validation
@@ -375,6 +382,8 @@ export function DataEntryForm({ onSuccess, initialData }: DataEntryFormProps) {
     stocks_down_20pct: '',
     stocks_up_20dollar: '',
     stocks_down_20dollar: '',
+    // VIX field (CRITICAL FOR DATA PERSISTENCE)
+    vix: '',
     worden_universe: '',
     sp500: '',
   })
@@ -408,6 +417,51 @@ export function DataEntryForm({ onSuccess, initialData }: DataEntryFormProps) {
 
   // Form state
   const [formData, setFormData] = useState<MarketDataInput>(() => breadthDataToFormData(initialData))
+
+  // Load last entered values for persistent fields when no initialData is provided
+  useEffect(() => {
+    const loadLastBreadthData = async () => {
+      if (!initialData) {
+        try {
+          // Get the most recent breadth data to pre-fill optional fields
+          const response = await window.electronAPI?.invoke('trading:get-breadth-data', 
+            undefined, // startDate - get most recent
+            undefined  // endDate - get most recent
+          )
+          
+          if (response && response.length > 0) {
+            const lastData = response[0] // Most recent entry
+            console.log('📥 Loading last breadth data for persistent fields:', lastData)
+            
+            // Only update optional fields that should persist (VIX, 20%, 20$)
+            setFormData(prev => ({
+              ...prev,
+              // Only update if fields are empty and we have data
+              vix: prev.vix || lastData.vix?.toString() || '',
+              stocks_up_20pct: prev.stocks_up_20pct || lastData.stocks_up_20pct?.toString() || '',
+              stocks_down_20pct: prev.stocks_down_20pct || lastData.stocks_down_20pct?.toString() || '',
+              stocks_up_20dollar: prev.stocks_up_20dollar || lastData.stocks_up_20dollar?.toString() || '',
+              stocks_down_20dollar: prev.stocks_down_20dollar || lastData.stocks_down_20dollar?.toString() || '',
+              // Also load T2108 and Worden Universe as they're relatively stable
+              worden_t2108: prev.worden_t2108 || lastData.t2108?.toString() || '',
+              worden_universe: prev.worden_universe || lastData.worden_universe?.toString() || ''
+            }))
+            
+            // VIX is now handled directly in formData.vix
+            console.log('📊 VIX will be pre-filled in formData.vix:', lastData.vix)
+            
+            console.log('✅ Pre-filled persistent fields from last entry (including VIX in formData)')
+            setPreFilledFieldsLoaded(true)
+          }
+        } catch (error) {
+          console.log('⚠️ Could not load last breadth data for pre-filling:', error)
+          // Silently fail - this is just a convenience feature
+        }
+      }
+    }
+
+    loadLastBreadthData()
+  }, [initialData])
 
   // Update form data when initialData changes
   useEffect(() => {
@@ -527,6 +581,12 @@ export function DataEntryForm({ onSuccess, initialData }: DataEntryFormProps) {
 
   // Convert form data to raw market breadth data
   const convertToRawData = useCallback((): RawMarketBreadthData => {
+    // DEBUG: Log VIX data for verification
+    console.log('🔍 VIX DEBUG - convertToRawData:')
+    console.log('  formData.vix:', formData.vix)
+    console.log('  Number(formData.vix):', Number(formData.vix))
+    console.log('  VIX final value:', Number(formData.vix) || undefined)
+    
     return {
       date: formData.date,
       timestamp: new Date().toISOString(),
@@ -555,6 +615,8 @@ export function DataEntryForm({ onSuccess, initialData }: DataEntryFormProps) {
       stocksDown20Dollar: Number(formData.stocks_down_20dollar) || undefined,
       ratio5Day: Number(formData.ratio_5day) || undefined,
       ratio10Day: Number(formData.ratio_10day) || undefined,
+      // VIX field (CRITICAL FOR DATA PERSISTENCE) - Now uses only formData.vix
+      vix: Number(formData.vix) || undefined,
       dataQualityScore: 100
     }
   }, [formData])
@@ -592,6 +654,11 @@ export function DataEntryForm({ onSuccess, initialData }: DataEntryFormProps) {
 
     try {
       const rawData = convertToRawData()
+      
+      // DEBUG: Log final raw data before sending to calculation
+      console.log('🔍 VIX DEBUG - Final raw data being sent:')
+      console.log('  rawData.vix:', rawData.vix)
+      console.log('  Full rawData object:', rawData)
       
       // Calculate and save to database
       const result = await calculateSingle(rawData, currentAlgorithm, true)
@@ -640,32 +707,83 @@ export function DataEntryForm({ onSuccess, initialData }: DataEntryFormProps) {
       stocks_up_20pct: '',
       stocks_down_20pct: '',
       stocks_up_20dollar: '',
-      stocks_down_20dollar: ''
+      stocks_down_20dollar: '',
+      // VIX field (CRITICAL FOR DATA PERSISTENCE)
+      vix: ''
     })
     setErrors({})
     setSuccess(false)
     setPreviewCalculation(null)
   }, [])
 
-  // Get data source confidence indicator
+  // Get data source confidence indicator - Updated for migrated database
   const getDataSourceIndicator = (field: keyof MarketDataInput) => {
     if (!initialData) return null
     
     const value = formData[field]
     if (!value || value === '') return null
     
-    const dbValue = initialData[field as keyof BreadthData]
+    // Comprehensive mapping for fields that have different names between MarketDataInput and BreadthData
+    const fieldMapping: Partial<Record<keyof MarketDataInput, keyof BreadthData>> = {
+      // Reference fields
+      'sp_reference': 'sp500',
+      'worden_t2108': 't2108',
+      'sp500': 'sp500',
+      // Standard fields (most have same names, but explicitly map for clarity)
+      'stocks_up_4pct': 'stocks_up_4pct',
+      'stocks_down_4pct': 'stocks_down_4pct',
+      'stocks_up_25pct_quarter': 'stocks_up_25pct_quarter',
+      'stocks_down_25pct_quarter': 'stocks_down_25pct_quarter',
+      'stocks_up_25pct_month': 'stocks_up_25pct_month',
+      'stocks_down_25pct_month': 'stocks_down_25pct_month',
+      'stocks_up_50pct_month': 'stocks_up_50pct_month',
+      'stocks_down_50pct_month': 'stocks_down_50pct_month',
+      'stocks_up_13pct_34days': 'stocks_up_13pct_34days',
+      'stocks_down_13pct_34days': 'stocks_down_13pct_34days',
+      'stocks_up_20pct': 'stocks_up_20pct',
+      'stocks_down_20pct': 'stocks_down_20pct',
+      'stocks_up_20dollar': 'stocks_up_20dollar',
+      'stocks_down_20dollar': 'stocks_down_20dollar',
+      'ratio_5day': 'ratio_5day',
+      'ratio_10day': 'ratio_10day',
+      't2108': 't2108',
+      'vix': 'vix',
+      'worden_universe': 'worden_universe'
+    }
     
-    if (dbValue !== null && dbValue !== undefined && dbValue !== '') {
+    // Get the corresponding field name in BreadthData
+    const breadthDataField = fieldMapping[field] || (field as keyof BreadthData)
+    const dbValue = initialData[breadthDataField]
+    
+    // Check if field is manual-only (not in CSV)
+    if (manualOnlyFields.has(field)) {
       return {
-        icon: '🟢',
-        label: 'Database',
-        confidence: 'High',
-        color: 'text-green-600 bg-green-50'
+        icon: '🔴',
+        label: 'Manual',
+        confidence: 'Manual Entry Required',
+        color: 'text-red-600 bg-red-50'
       }
     }
     
-    if (extractFromNotes(initialData.notes, field)) {
+    // Check if field is in CSV mapping (should show as Database after migration)
+    if (field in csvFieldMap) {
+      // Check if the value came from database (properly populated from CSV)
+      const isValidDbValue = dbValue !== null && dbValue !== undefined && dbValue !== '' && 
+                            !(typeof dbValue === 'number' && dbValue === 0)
+      
+      if (isValidDbValue) {
+        return {
+          icon: '🟢',
+          label: 'Database',
+          confidence: 'High',
+          color: 'text-green-600 bg-green-50'
+        }
+      }
+    }
+    
+    // Check if value came from notes extraction
+    const notesValue = extractFromNotes(initialData.notes, field)
+    if (notesValue) {
       return {
         icon: '🟡',
         label: 'Notes',
@@ -674,7 +792,9 @@ export function DataEntryForm({ onSuccess, initialData }: DataEntryFormProps) {
       }
     }
     
-    if (getCorrelatedValue(field, initialData)) {
+    // Check if value came from correlation
+    const correlatedValue = getCorrelatedValue(field, initialData)
+    if (correlatedValue) {
       return {
         icon: '🔵',
         label: 'Estimated',
@@ -683,7 +803,9 @@ export function DataEntryForm({ onSuccess, initialData }: DataEntryFormProps) {
       }
     }
     
-    if (getLegacyFieldFallback(field, initialData)) {
+    // Check if value came from legacy fallback
+    const legacyValue = getLegacyFieldFallback(field, initialData)
+    if (legacyValue) {
       return {
         icon: '🟠',
         label: 'Legacy',
@@ -727,9 +849,7 @@ export function DataEntryForm({ onSuccess, initialData }: DataEntryFormProps) {
             value={formData[field]}
             onChange={(e) => handleInputChange(field, e.target.value)}
             placeholder={placeholder}
-            min={min}
-            max={max}
-            step={step}
+            // Removed HTML5 validation constraints to prevent browser validation errors
             className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
               errors[field] ? 'border-red-300' : 'border-gray-300'
             } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''} ${
@@ -831,6 +951,18 @@ export function DataEntryForm({ onSuccess, initialData }: DataEntryFormProps) {
             {renderInputField('stocks_down_13pct_34days', 'Stocks Down 13% (34 Days)', 'e.g. 180', 'number', false, 0)}
           </div>
 
+          {/* VIX Information */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-3">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center space-x-2">
+                <Calculator className="w-5 h-5 text-red-600" />
+                <span>Volatility Information</span>
+              </h3>
+            </div>
+            
+            {renderInputField('vix', 'VIX Level', 'e.g. 18.5', 'number', false)}
+          </div>
+
           {/* Additional Indicators - 20% and $20 moves */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
@@ -893,6 +1025,7 @@ export function DataEntryForm({ onSuccess, initialData }: DataEntryFormProps) {
           </div>
         </form>
       </div>
+
 
       {/* Preview Calculation Results */}
       {previewCalculation && (

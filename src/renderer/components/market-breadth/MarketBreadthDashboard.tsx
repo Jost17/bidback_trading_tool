@@ -20,6 +20,7 @@ import { HistoricalDataTable } from './HistoricalDataTable'
 import { BreadthScoreCalculator } from './BreadthScoreCalculator'
 import { CSVManager } from './CSVManager'
 import { CSVImportModal } from './CSVImportModal'
+import { PortfolioSettings } from '../settings/PortfolioSettings'
 import type { BreadthData, CSVImportResult } from '../../../types/trading'
 
 interface DashboardStats {
@@ -31,16 +32,17 @@ interface DashboardStats {
 }
 
 interface ActiveView {
-  type: 'dashboard' | 'entry' | 'table' | 'calculator' | 'csv'
+  type: 'dashboard' | 'entry' | 'table' | 'calculator' | 'csv' | 'settings'
   title: string
 }
 
 const VIEWS: ActiveView[] = [
   { type: 'dashboard', title: 'Dashboard' },
-  { type: 'entry', title: 'Manual Entry' },
+  { type: 'entry', title: 'Market Data Entry' },
   { type: 'table', title: 'Historical Data' },
   { type: 'calculator', title: 'Calculator' },
-  { type: 'csv', title: 'Import/Export' }
+  { type: 'csv', title: 'Import/Export' },
+  { type: 'settings', title: 'Portfolio Settings' }
 ]
 
 interface MarketBreadthDashboardProps {
@@ -50,6 +52,7 @@ interface MarketBreadthDashboardProps {
 export function MarketBreadthDashboard({ onNavigateHome }: MarketBreadthDashboardProps = {}) {
   // State management
   const [activeView, setActiveView] = useState<ActiveView['type']>('dashboard')
+  const [selectedDateData, setSelectedDateData] = useState<BreadthData | null>(null)
   const [isCSVImportOpen, setIsCSVImportOpen] = useState(false)
   const [stats, setStats] = useState<DashboardStats>({
     currentBreadthScore: null,
@@ -61,6 +64,13 @@ export function MarketBreadthDashboard({ onNavigateHome }: MarketBreadthDashboar
   const [recentData, setRecentData] = useState<BreadthData[]>([])
   const [isLoadingStats, setIsLoadingStats] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [portfolioSettings, setPortfolioSettings] = useState({
+    portfolioSize: 100000,
+    baseSizePercentage: 10,
+    maxHeatPercentage: 80,
+    maxPositions: 8,
+    lastUpdated: new Date().toISOString()
+  })
 
   // Breadth calculator hook
   const {
@@ -79,6 +89,19 @@ export function MarketBreadthDashboard({ onNavigateHome }: MarketBreadthDashboar
     setError(null)
 
     try {
+      // Wait for tradingAPI to be available with retries
+      let retries = 0
+      const maxRetries = 10
+      
+      while (!window.tradingAPI?.getBreadthData && retries < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+        retries++
+      }
+      
+      if (!window.tradingAPI?.getBreadthData) {
+        throw new Error('Trading API not available after waiting')
+      }
+      
       // Try to get all recent data first to find the actual date range
       const allData = await window.tradingAPI.getBreadthData('2020-01-01', '2030-12-31')
       
@@ -128,6 +151,23 @@ export function MarketBreadthDashboard({ onNavigateHome }: MarketBreadthDashboar
     setActiveView('dashboard')
   }, [loadDashboardData])
 
+  // Load data for a specific date (for DataEntryForm initialData)
+  const loadDateData = useCallback(async (date?: string) => {
+    try {
+      const targetDate = date || new Date().toISOString().split('T')[0]
+      
+      if (window.tradingAPI?.getBreadthDataByDate) {
+        const data = await window.tradingAPI.getBreadthDataByDate(targetDate)
+        setSelectedDateData(data)
+        return data
+      }
+    } catch (error) {
+      console.error('Error loading date data:', error)
+      setSelectedDateData(null)
+      return null
+    }
+  }, [])
+
   // Handle CSV import success
   const handleCSVImportComplete = useCallback((result: CSVImportResult) => {
     console.log('CSV Import completed:', result)
@@ -139,6 +179,13 @@ export function MarketBreadthDashboard({ onNavigateHome }: MarketBreadthDashboar
   useEffect(() => {
     loadDashboardData()
   }, [loadDashboardData])
+
+  // Load date data when switching to entry view
+  useEffect(() => {
+    if (activeView === 'entry') {
+      loadDateData()
+    }
+  }, [activeView, loadDateData])
 
   // Format market phase color
   const getMarketPhaseColor = (phase: string) => {
@@ -166,16 +213,28 @@ export function MarketBreadthDashboard({ onNavigateHome }: MarketBreadthDashboar
     return `${value.toFixed(0)}%`
   }
 
+  // Handle portfolio settings change
+  const handlePortfolioSettingsChange = useCallback((newSettings: typeof portfolioSettings) => {
+    setPortfolioSettings(newSettings)
+    // Here you could also save to localStorage or backend
+    console.log('Portfolio settings updated:', newSettings)
+  }, [])
+
   const renderActiveView = () => {
     switch (activeView) {
       case 'entry':
-        return <DataEntryForm onSuccess={handleDataEntrySuccess} />
+        return <DataEntryForm onSuccess={handleDataEntrySuccess} initialData={selectedDateData} />
       case 'table':
         return <HistoricalDataTable onDataChange={loadDashboardData} />
       case 'calculator':
         return <BreadthScoreCalculator onCalculation={handleDataEntrySuccess} />
       case 'csv':
         return <CSVManager onImportSuccess={handleDataEntrySuccess} />
+      case 'settings':
+        return <PortfolioSettings 
+          initialSettings={portfolioSettings}
+          onSettingsChange={handlePortfolioSettingsChange}
+        />
       default:
         return null
     }
@@ -246,7 +305,7 @@ export function MarketBreadthDashboard({ onNavigateHome }: MarketBreadthDashboar
           <div>
             <h1 className="text-3xl font-bold flex items-center space-x-3">
               <BarChart3 className="w-9 h-9" />
-              <span>BIDBACK Trading Tool</span>
+              <span>Bidback Trading Tool</span>
             </h1>
             <p className="text-blue-100 mt-2 text-lg">Market Breadth Analysis & Trading Management System</p>
           </div>
@@ -282,13 +341,6 @@ export function MarketBreadthDashboard({ onNavigateHome }: MarketBreadthDashboar
           >
             <RefreshCw className={`w-4 h-4 ${isLoading || isLoadingStats ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
-          </button>
-          <button
-            onClick={() => setActiveView('entry')}
-            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Manual Entry</span>
           </button>
           <button
             onClick={() => setIsCSVImportOpen(true)}

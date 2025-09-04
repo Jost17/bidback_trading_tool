@@ -16,9 +16,16 @@
     "src/preload/preload.ts",
     "src/database/connection.ts",
     "src/database/services/breadth-service.ts",
+    "src/database/services/breadth-adapter.ts",
     "src/database/services/trade-service.ts",
+    "src/database/services/settings-adapter.ts",
     "src/database/services/data-recovery-service.ts",
-    "src/types/trading.ts"
+    "src/types/trading.ts",
+    "src/types/breadth-calculation-config.ts",
+    "src/types/breadth-raw-data.ts",
+    "src/services/breadth-score-calculator.ts",
+    "src/services/breadth-configuration-manager.ts",
+    "src/services/algorithms/*.ts"
   ],
   "exclude": [
     "src/renderer",
@@ -26,7 +33,6 @@
     "dist",
     "**/__tests__/**",
     "**/*.test.ts",
-    "src/services/**",
     "src/database/benchmarks/**",
     "src/database/utils/**"
   ]

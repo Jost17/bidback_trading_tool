@@ -3,17 +3,18 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Navigation } from './components/Navigation'
 import { MarketBreadthDashboard } from './components/market-breadth/MarketBreadthDashboard'
 import { TradeJournalDashboard } from './components/trade-journal/TradeJournalDashboard'
-import { TradingDashboard } from './components/trading/TradingDashboard'
+import { TradingOperationsDashboard } from './components/trading-operations/TradingOperationsDashboard'
 import { SettingsPage } from './components/settings/SettingsPage'
 import RiskManagementDashboard from './components/risk/RiskManagementDashboard'
 import { LoadingSpinner } from './components/ui/LoadingSpinner'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { TradingProvider } from './context/TradingContext'
+import { PortfolioProvider } from './contexts/PortfolioContext'
 import { useAppInitialization } from './hooks/useAppInitialization'
 
 function App() {
   const { isInitialized, error, initializationProgress } = useAppInitialization()
-  const [currentView, setCurrentView] = useState<'market-breadth' | 'trade-journal' | 'trading' | 'risk-management' | 'settings'>('market-breadth')
+  const [currentView, setCurrentView] = useState<'market-breadth' | 'trade-journal' | 'trading-operations' | 'risk-management' | 'settings'>('market-breadth')
 
   if (error) {
     return (
@@ -44,7 +45,7 @@ function App() {
           <div className="mb-4">
             <LoadingSpinner size="large" />
           </div>
-          <h2 className="text-xl font-semibold mb-2">Initializing BIDBACK Trading Tool</h2>
+          <h2 className="text-xl font-semibold mb-2">Initializing Bidback Trading Tool</h2>
           <p className="text-gray-600 mb-4">{initializationProgress}</p>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: '60%' }}></div>
@@ -56,8 +57,9 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <TradingProvider>
-        <div className="min-h-screen bg-gray-50">
+      <PortfolioProvider>
+        <TradingProvider>
+          <div className="min-h-screen bg-gray-50">
           {/* Navigation Header with Status Bar */}
           <Navigation 
             currentView={currentView}
@@ -82,8 +84,8 @@ function App() {
               />
             )}
             
-            {currentView === 'trading' && (
-              <TradingDashboard 
+            {currentView === 'trading-operations' && (
+              <TradingOperationsDashboard 
                 onNavigateBack={() => setCurrentView('market-breadth')}
               />
             )}
@@ -97,8 +99,9 @@ function App() {
             )}
           </main>
         
-        </div>
-      </TradingProvider>
+          </div>
+        </TradingProvider>
+      </PortfolioProvider>
     </ErrorBoundary>
   )
 }

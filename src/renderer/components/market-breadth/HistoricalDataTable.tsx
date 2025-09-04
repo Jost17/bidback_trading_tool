@@ -461,7 +461,7 @@ export function HistoricalDataTable({ onDataChange }: HistoricalDataTableProps) 
               <label className="block text-sm font-medium text-gray-700 mb-1">Min Breadth Score</label>
               <input
                 type="number"
-                step="0.1"
+                // Removed step constraint for flexible input
                 value={filters.minBreadthScore}
                 onChange={(e) => handleFilterChange('minBreadthScore', e.target.value)}
                 placeholder="e.g. 0"
@@ -473,7 +473,7 @@ export function HistoricalDataTable({ onDataChange }: HistoricalDataTableProps) 
               <label className="block text-sm font-medium text-gray-700 mb-1">Max Breadth Score</label>
               <input
                 type="number"
-                step="0.1"
+                // Removed step constraint for flexible input
                 value={filters.maxBreadthScore}
                 onChange={(e) => handleFilterChange('maxBreadthScore', e.target.value)}
                 placeholder="e.g. 100"

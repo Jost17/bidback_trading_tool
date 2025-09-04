@@ -1,95 +1,271 @@
-import React from 'react'
-import { TrendingUp, AlertTriangle, Activity, Wifi, WifiOff, ArrowLeft } from 'lucide-react'
+import React, { useState, useCallback, useEffect } from 'react'
+import { 
+  Target, 
+  BarChart3, 
+  TrendingUp, 
+  DollarSign,
+  Activity,
+  AlertTriangle,
+  Zap,
+  Calendar,
+  Home,
+  Settings
+} from 'lucide-react'
+import { PlannedTrades } from './PlannedTrades'
+import { OpenPositions } from './OpenPositions'
+import { PortfolioSettings } from '../settings/PortfolioSettings'
+import { HolidayCalendar } from './HolidayCalendar'
+import { TradeEntryForm } from './TradeEntryForm'
 
 interface TradingDashboardProps {
-  onNavigateBack?: () => void
+  onNavigateHome?: () => void
 }
 
-export function TradingDashboard({ onNavigateBack }: TradingDashboardProps = {}) {
-  const [isConnected] = React.useState(false)
+type ActiveView = 'dashboard' | 'entry' | 'planned' | 'positions' | 'settings' | 'calendar'
 
+const VIEWS = [
+  { type: 'dashboard' as const, title: 'Dashboard', icon: BarChart3 },
+  { type: 'entry' as const, title: 'Trade Entry', icon: Zap },
+  { type: 'planned' as const, title: 'Planned Trades', icon: Target },
+  { type: 'positions' as const, title: 'Open Positions', icon: TrendingUp },
+  { type: 'calendar' as const, title: 'Holiday Calendar', icon: Calendar },
+  { type: 'settings' as const, title: 'Settings', icon: Settings }
+]
+
+interface TradingStats {
+  plannedTrades: number
+  openPositions: number
+  totalValue: number
+  unrealizedPL: number
+  todaysPL: number
+  portfolioHeat: number
+}
+
+export function TradingDashboard({ onNavigateHome }: TradingDashboardProps) {
+  const [activeView, setActiveView] = useState<ActiveView>('dashboard')
+  const [stats, setStats] = useState<TradingStats>({
+    plannedTrades: 2,
+    openPositions: 2,
+    totalValue: 23456,
+    unrealizedPL: 1482.60,
+    todaysPL: 234.50,
+    portfolioHeat: 23.5
+  })
+  const [portfolioSettings, setPortfolioSettings] = useState({
+    portfolioSize: 100000,
+    baseSizePercentage: 10,
+    maxHeatPercentage: 80,
+    maxPositions: 8,
+    lastUpdated: new Date().toISOString()
+  })
+  const [isLoading, setIsLoading] = useState(false)
+  
+  useEffect(() => {
+    // Load dashboard data on mount
+    loadDashboardStats()
+  }, [])
+  
+  const loadDashboardStats = useCallback(async () => {
+    setIsLoading(true)
+    // Simulate API call
+    setTimeout(() => {
+      // In real implementation, this would fetch from backend
+      setStats({
+        plannedTrades: 2,
+        openPositions: 2,
+        totalValue: 23456,
+        unrealizedPL: 1482.60,
+        todaysPL: 234.50,
+        portfolioHeat: 23.5
+      })
+      setIsLoading(false)
+    }, 500)
+  }, [])
+  
+  const handlePortfolioSettingsChange = useCallback((newSettings: typeof portfolioSettings) => {
+    setPortfolioSettings(newSettings)
+    // In real implementation, save to backend
+    console.log('Portfolio settings updated:', newSettings)
+  }, [])
+  
+  const handleTradeExecuted = useCallback((tradeId: number) => {
+    // Refresh stats when trade is executed
+    loadDashboardStats()
+    console.log('Trade executed:', tradeId)
+  }, [loadDashboardStats])
+  
+  const handlePositionClosed = useCallback((positionId: number) => {
+    // Refresh stats when position is closed
+    loadDashboardStats()
+    console.log('Position closed:', positionId)
+  }, [loadDashboardStats])
+  
+  const renderActiveView = () => {
+    switch (activeView) {
+      case 'entry':
+        return <TradeEntryForm />
+      case 'planned':
+        return (
+          <PlannedTrades 
+            onTradeExecuted={handleTradeExecuted}
+            onTradeDeleted={() => loadDashboardStats()}
+          />
+        )
+      case 'positions':
+        return (
+          <OpenPositions 
+            onPositionUpdate={() => loadDashboardStats()}
+            onPositionClosed={handlePositionClosed}
+          />
+        )
+      case 'settings':
+        return (
+          <PortfolioSettings 
+            initialSettings={portfolioSettings}
+            onSettingsChange={handlePortfolioSettingsChange}
+          />
+        )
+      case 'calendar':
+        return (
+          <HolidayCalendar 
+            onBack={() => setActiveView('dashboard')}
+          />
+        )
+      default:
+        return null
+    }
+  }
+  
+  // Non-dashboard views
+  if (activeView !== 'dashboard') {
+    return (
+      <div className="space-y-6">
+        {/* Header with navigation */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            {onNavigateHome && (
+              <>
+                <button
+                  onClick={onNavigateHome}
+                  className="flex items-center space-x-2 text-gray-600 hover:text-gray-800"
+                >
+                  <Home className="w-4 h-4" />
+                  <span className="font-medium">Home</span>
+                </button>
+                <span className="text-gray-400">/</span>
+              </>
+            )}
+            <button
+              onClick={() => setActiveView('dashboard')}
+              className="flex items-center space-x-2 text-blue-600 hover:text-blue-700"
+            >
+              <Target className="w-5 h-5" />
+              <span className="font-medium">Trading</span>
+            </button>
+            <span className="text-gray-400">/</span>
+            <span className="text-gray-900 font-semibold">
+              {VIEWS.find(v => v.type === activeView)?.title}
+            </span>
+          </div>
+        </div>
+
+        {/* View Navigation */}
+        <div className="bg-white rounded-lg shadow-sm border p-1">
+          <div className="flex space-x-1">
+            {VIEWS.map((view) => {
+              const IconComponent = view.icon
+              return (
+                <button
+                  key={view.type}
+                  onClick={() => setActiveView(view.type)}
+                  className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                    activeView === view.type
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <IconComponent className="w-4 h-4" />
+                  <span>{view.title}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Active view content */}
+        {renderActiveView()}
+      </div>
+    )
+  }
+  
+  // Dashboard view
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          {onNavigateBack && (
-            <button
-              onClick={onNavigateBack}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Back to Market Breadth"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </button>
-          )}
+      {/* Welcome Banner */}
+      <div className="bg-gradient-to-r from-green-600 to-blue-700 text-white rounded-lg p-6 shadow-lg">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
-              <TrendingUp className="w-7 h-7 text-blue-600" />
-              <span>Live Trading</span>
+            <h1 className="text-3xl font-bold flex items-center space-x-3">
+              <Target className="w-9 h-9" />
+              <span>Bidback Trading Dashboard</span>
             </h1>
-            <p className="text-gray-600 mt-1">Interactive Brokers integration & order management</p>
+            <p className="text-green-100 mt-2 text-lg">Order Management & Position Tracking System</p>
           </div>
-        </div>
-        
-        <div className="flex items-center space-x-3">
-          <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${
-            isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-          }`}>
-            {isConnected ? (
-              <Wifi className="w-4 h-4" />
-            ) : (
-              <WifiOff className="w-4 h-4" />
-            )}
-            <span>{isConnected ? 'Connected' : 'Disconnected'}</span>
+          <div className="text-right">
+            <p className="text-sm text-green-100">Portfolio Heat</p>
+            <p className="text-2xl font-semibold flex items-center justify-end space-x-2">
+              <span className={`w-3 h-3 rounded-full ${
+                stats.portfolioHeat > 60 ? 'bg-red-400 animate-pulse' :
+                stats.portfolioHeat > 40 ? 'bg-yellow-400' : 'bg-green-400'
+              }`}></span>
+              <span>{stats.portfolioHeat}%</span>
+            </p>
           </div>
-          
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-            Connect to IB
-          </button>
         </div>
       </div>
-
-      {/* Connection Status Alert */}
-      {!isConnected && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-start space-x-3">
-            <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
-            <div>
-              <h3 className="text-sm font-medium text-yellow-800">Interactive Brokers Not Connected</h3>
-              <p className="text-sm text-yellow-700 mt-1">
-                Connect to Interactive Brokers TWS or IB Gateway to enable live trading functionality.
-                Make sure TWS is running and API access is enabled.
-              </p>
-            </div>
-          </div>
+      
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900">Trading Overview</h2>
+          <p className="text-gray-600 mt-1">
+            Real-time position management with Bidback Master System integration
+          </p>
         </div>
-      )}
-
-      {/* Account Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      </div>
+      
+      {/* View Navigation */}
+      <div className="bg-white rounded-lg shadow-sm border p-1">
+        <div className="flex space-x-1">
+          {VIEWS.map((view) => {
+            const IconComponent = view.icon
+            return (
+              <button
+                key={view.type}
+                onClick={() => setActiveView(view.type)}
+                className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  activeView === view.type
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <IconComponent className="w-4 h-4" />
+                <span>{view.title}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+      
+      {/* Quick Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Buying Power</p>
-              <p className="text-2xl font-bold text-gray-900">--</p>
-              <p className="text-sm text-gray-500">Not connected</p>
+              <p className="text-sm font-medium text-gray-600">Planned Trades</p>
+              <p className="text-2xl font-bold text-blue-600">{stats.plannedTrades}</p>
             </div>
-            <div className="p-3 bg-blue-50 rounded-full">
-              <TrendingUp className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Day P&L</p>
-              <p className="text-2xl font-bold text-gray-900">--</p>
-              <p className="text-sm text-gray-500">Not available</p>
-            </div>
-            <div className="p-3 bg-green-50 rounded-full">
-              <Activity className="w-6 h-6 text-green-600" />
-            </div>
+            <Target className="w-8 h-8 text-blue-600" />
           </div>
         </div>
 
@@ -97,114 +273,152 @@ export function TradingDashboard({ onNavigateBack }: TradingDashboardProps = {})
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Open Positions</p>
-              <p className="text-2xl font-bold text-gray-900">0</p>
-              <p className="text-sm text-gray-500">No positions</p>
+              <p className="text-2xl font-bold text-green-600">{stats.openPositions}</p>
             </div>
-            <div className="p-3 bg-gray-50 rounded-full">
-              <TrendingUp className="w-6 h-6 text-gray-600" />
-            </div>
+            <TrendingUp className="w-8 h-8 text-green-600" />
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Pending Orders</p>
-              <p className="text-2xl font-bold text-gray-900">0</p>
-              <p className="text-sm text-gray-500">No pending orders</p>
+              <p className="text-sm font-medium text-gray-600">Total Value</p>
+              <p className="text-2xl font-bold text-gray-900">
+                ${stats.totalValue.toLocaleString()}
+              </p>
             </div>
-            <div className="p-3 bg-yellow-50 rounded-full">
-              <Activity className="w-6 h-6 text-yellow-600" />
+            <DollarSign className="w-8 h-8 text-gray-600" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Unrealized P&L</p>
+              <p className={`text-2xl font-bold ${
+                stats.unrealizedPL >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}>
+                ${stats.unrealizedPL >= 0 ? '+' : ''}
+                {stats.unrealizedPL.toLocaleString(undefined, {maximumFractionDigits: 0})}
+              </p>
             </div>
+            {stats.unrealizedPL >= 0 ? (
+              <TrendingUp className="w-8 h-8 text-green-600" />
+            ) : (
+              <AlertTriangle className="w-8 h-8 text-red-600" />
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Today's P&L</p>
+              <p className={`text-2xl font-bold ${
+                stats.todaysPL >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}>
+                ${stats.todaysPL >= 0 ? '+' : ''}
+                {stats.todaysPL}
+              </p>
+            </div>
+            <Zap className="w-8 h-8 text-yellow-600" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Portfolio Heat</p>
+              <p className={`text-2xl font-bold ${
+                stats.portfolioHeat > 60 ? 'text-red-600' :
+                stats.portfolioHeat > 40 ? 'text-yellow-600' : 'text-green-600'
+              }`}>
+                {stats.portfolioHeat}%
+              </p>
+            </div>
+            <Activity className={`w-8 h-8 ${
+              stats.portfolioHeat > 60 ? 'text-red-600' :
+              stats.portfolioHeat > 40 ? 'text-yellow-600' : 'text-green-600'
+            }`} />
           </div>
         </div>
       </div>
-
-      {/* Trading Interface */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Order Entry */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Order Entry</h2>
+      
+      {/* Quick Actions */}
+      <div className="bg-white rounded-lg shadow-sm border p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <button
+            onClick={() => setActiveView('planned')}
+            className="flex items-center justify-center space-x-3 p-4 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+          >
+            <Target className="w-6 h-6 text-blue-600" />
+            <div className="text-left">
+              <div className="font-medium text-gray-900">View Planned Trades</div>
+              <div className="text-sm text-gray-600">{stats.plannedTrades} trades ready</div>
+            </div>
+          </button>
           
-          {!isConnected ? (
-            <div className="text-center text-gray-500 py-8">
-              <WifiOff className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-              <p className="font-medium">IB Connection Required</p>
-              <p className="text-sm">Connect to Interactive Brokers to place orders</p>
+          <button
+            onClick={() => setActiveView('positions')}
+            className="flex items-center justify-center space-x-3 p-4 border border-green-200 rounded-lg hover:bg-green-50 transition-colors"
+          >
+            <TrendingUp className="w-6 h-6 text-green-600" />
+            <div className="text-left">
+              <div className="font-medium text-gray-900">Monitor Positions</div>
+              <div className="text-sm text-gray-600">{stats.openPositions} positions open</div>
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Symbol</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g. AAPL"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Action</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="BUY">BUY</option>
-                    <option value="SELL">SELL</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                  <input
-                    type="number"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g. 100"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Order Type</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="MKT">Market</option>
-                    <option value="LMT">Limit</option>
-                    <option value="STP">Stop</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Limit Price</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g. 150.25"
-                />
-              </div>
-              
-              <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
-                Place Order
-              </button>
+          </button>
+          
+          <button
+            onClick={() => setActiveView('settings')}
+            className="flex items-center justify-center space-x-3 p-4 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+          >
+            <Settings className="w-6 h-6 text-purple-600" />
+            <div className="text-left">
+              <div className="font-medium text-gray-900">Portfolio Settings</div>
+              <div className="text-sm text-gray-600">Configure Bidback</div>
             </div>
-          )}
+          </button>
+          
+          <button
+            onClick={() => setActiveView('calendar')}
+            className="flex items-center justify-center space-x-3 p-4 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors"
+          >
+            <Calendar className="w-6 h-6 text-orange-600" />
+            <div className="text-left">
+              <div className="font-medium text-gray-900">Holiday Calendar</div>
+              <div className="text-sm text-gray-600">VIX Exit Matrix & Holidays</div>
+            </div>
+          </button>
         </div>
-
-        {/* Positions & Orders */}
-        <div className="space-y-6">
-          {/* Positions */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Positions</h3>
-            <div className="text-center text-gray-500 py-4">
-              <p className="font-medium">No open positions</p>
-              <p className="text-sm">Your positions will appear here</p>
+      </div>
+      
+      {/* System Status */}
+      <div className="bg-white rounded-lg shadow-sm border p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Bidback System Status</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+            <div>
+              <div className="font-medium text-gray-900">Position Calculator</div>
+              <div className="text-sm text-gray-600">Active - VIX & Breadth integration working</div>
             </div>
           </div>
-
-          {/* Recent Orders */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Orders</h3>
-            <div className="text-center text-gray-500 py-4">
-              <p className="font-medium">No recent orders</p>
-              <p className="text-sm">Order history will appear here</p>
+          
+          <div className="flex items-center space-x-3">
+            <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+            <div>
+              <div className="font-medium text-gray-900">Order Management</div>
+              <div className="text-sm text-gray-600">Demo Mode - Manual execution only</div>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+            <div>
+              <div className="font-medium text-gray-900">IB Integration</div>
+              <div className="text-sm text-gray-600">Planned - Phase 4 implementation</div>
             </div>
           </div>
         </div>

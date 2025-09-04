@@ -22,7 +22,7 @@ interface BreadthScoreCalculatorProps {
 }
 
 interface CalculationMode {
-  type: 'single' | 'realtime' | 'historical' | 'bulk'
+  type: 'single' | 'historical' | 'bulk'
   title: string
   description: string
 }
@@ -30,34 +30,37 @@ interface CalculationMode {
 const CALCULATION_MODES: CalculationMode[] = [
   {
     type: 'single',
-    title: 'Single Calculation',
-    description: 'Calculate breadth score for a specific data point'
-  },
-  {
-    type: 'realtime',
-    title: 'Real-time Update',
-    description: 'Get latest breadth score from database'
+    title: 'Manual Calculation',
+    description: 'Enter data manually and calculate breadth score'
   },
   {
     type: 'historical',
-    title: 'Historical Range',
-    description: 'Calculate scores for a date range'
+    title: 'Database Query',
+    description: 'Query saved breadth scores from database'
   },
   {
     type: 'bulk',
-    title: 'Bulk Processing',
-    description: 'Process all available historical data'
+    title: 'Recalculation',
+    description: 'Recalculate existing data with different algorithm'
   }
 ]
 
 export function BreadthScoreCalculator({ onCalculation }: BreadthScoreCalculatorProps) {
   // State management
-  const [selectedMode, setSelectedMode] = useState<CalculationMode['type']>('realtime')
+  const [selectedMode, setSelectedMode] = useState<CalculationMode['type']>('historical')
   const [showAlgorithmSettings, setShowAlgorithmSettings] = useState(false)
   const [calculationResults, setCalculationResults] = useState<any[]>([])
   const [historicalRange, setHistoricalRange] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
+  })
+  const [manualData, setManualData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    vix: '',
+    sp500: '',
+    t2108: '',
+    stocksUp4Pct: '',
+    stocksDown4Pct: ''
   })
 
   // Breadth calculator hooks
@@ -102,14 +105,27 @@ export function BreadthScoreCalculator({ onCalculation }: BreadthScoreCalculator
     }
   }, [switchAlgorithm])
 
-  // Handle real-time calculation
-  const handleRealTimeCalculation = useCallback(async () => {
-    const result = await calculateRealTime()
+  // Handle manual calculation
+  const handleManualCalculation = useCallback(async () => {
+    // Create RawMarketBreadthData from manual input
+    const rawData: RawMarketBreadthData = {
+      date: manualData.date,
+      timestamp: new Date().toISOString(),
+      vix: parseFloat(manualData.vix) || 0,
+      sp500Level: manualData.sp500,
+      t2108: parseFloat(manualData.t2108) || 0,
+      stocksUp4PctDaily: parseFloat(manualData.stocksUp4Pct) || 0,
+      stocksDown4PctDaily: parseFloat(manualData.stocksDown4Pct) || 0,
+      wordenUniverse: 7000,
+      dataQualityScore: 100
+    }
+
+    const result = await calculateSingle(rawData)
     if (result) {
       setCalculationResults(prev => [result, ...prev.slice(0, 9)])
       onCalculation?.()
     }
-  }, [calculateRealTime, onCalculation])
+  }, [calculateSingle, manualData, onCalculation])
 
   // Handle historical calculation
   const handleHistoricalCalculation = useCallback(async () => {
@@ -141,16 +157,16 @@ export function BreadthScoreCalculator({ onCalculation }: BreadthScoreCalculator
   // Handle calculation based on selected mode
   const handleCalculation = useCallback(async () => {
     switch (selectedMode) {
-      case 'realtime':
-        return handleRealTimeCalculation()
+      case 'single':
+        return handleManualCalculation()
       case 'historical':
         return handleHistoricalCalculation()
       case 'bulk':
         return handleBulkProcessing()
       default:
-        return handleRealTimeCalculation()
+        return handleHistoricalCalculation()
     }
-  }, [selectedMode, handleRealTimeCalculation, handleHistoricalCalculation, handleBulkProcessing])
+  }, [selectedMode, handleManualCalculation, handleHistoricalCalculation, handleBulkProcessing])
 
   // Handle configuration save
   const handleSaveConfiguration = useCallback(async () => {
@@ -384,7 +400,7 @@ export function BreadthScoreCalculator({ onCalculation }: BreadthScoreCalculator
       <div className="bg-white rounded-lg shadow-sm border p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Calculation Modes</h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {CALCULATION_MODES.map((mode) => (
             <button
               key={mode.type}
@@ -401,11 +417,83 @@ export function BreadthScoreCalculator({ onCalculation }: BreadthScoreCalculator
           ))}
         </div>
 
-        {/* Historical Range Settings */}
+        {/* Manual Calculation Input */}
+        {selectedMode === 'single' && (
+          <div className="bg-gray-50 rounded-lg p-6 mb-6">
+            <h4 className="font-medium text-gray-900 mb-4">Manual Data Entry</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={manualData.date}
+                  onChange={(e) => setManualData(prev => ({ ...prev, date: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">VIX</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g. 15.50"
+                  value={manualData.vix}
+                  onChange={(e) => setManualData(prev => ({ ...prev, vix: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">S&P 500</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 4,500.25"
+                  value={manualData.sp500}
+                  onChange={(e) => setManualData(prev => ({ ...prev, sp500: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">T2108 (%)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="e.g. 45.5"
+                  value={manualData.t2108}
+                  onChange={(e) => setManualData(prev => ({ ...prev, t2108: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Stocks Up 4%</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 250"
+                  value={manualData.stocksUp4Pct}
+                  onChange={(e) => setManualData(prev => ({ ...prev, stocksUp4Pct: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Stocks Down 4%</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 150"
+                  value={manualData.stocksDown4Pct}
+                  onChange={(e) => setManualData(prev => ({ ...prev, stocksDown4Pct: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Database Query Settings */}
         {(selectedMode === 'historical') && (
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <h4 className="font-medium text-gray-900 mb-3">Date Range</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-gray-50 rounded-lg p-6 mb-6">
+            <h4 className="font-medium text-gray-900 mb-4">Database Query Options</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
                 <input
@@ -425,6 +513,50 @@ export function BreadthScoreCalculator({ onCalculation }: BreadthScoreCalculator
                 />
               </div>
             </div>
+            <p className="text-sm text-gray-600">
+              Query existing breadth scores from the database for the selected date range. 
+              No recalculation will be performed - only saved data will be retrieved.
+            </p>
+          </div>
+        )}
+
+        {/* Recalculation Settings */}
+        {(selectedMode === 'bulk') && (
+          <div className="bg-gray-50 rounded-lg p-6 mb-6">
+            <h4 className="font-medium text-gray-900 mb-4">Recalculation Options</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <input
+                  type="date"
+                  value={historicalRange.startDate}
+                  onChange={(e) => setHistoricalRange(prev => ({ ...prev, startDate: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <input
+                  type="date"
+                  value={historicalRange.endDate}
+                  onChange={(e) => setHistoricalRange(prev => ({ ...prev, endDate: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+              <div className="flex items-center space-x-2 text-yellow-800 mb-2">
+                <Info className="w-5 h-5" />
+                <span className="font-medium">Recalculation Process</span>
+              </div>
+              <p className="text-yellow-700 text-sm">
+                This will recalculate breadth scores for existing data using the currently selected algorithm ({currentAlgorithm}). 
+                Existing scores will be updated in the database.
+              </p>
+            </div>
+            <p className="text-sm text-gray-600">
+              Use this to apply different algorithms to historical data or update scores after algorithm improvements.
+            </p>
           </div>
         )}
 
@@ -538,6 +670,126 @@ export function BreadthScoreCalculator({ onCalculation }: BreadthScoreCalculator
                   <strong>Warnings:</strong> {latestResult.metadata.warnings.join(', ')}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Breadth Score Legend */}
+          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-4 mt-4 border border-indigo-200">
+            <div className="flex items-center mb-3">
+              <Info className="w-5 h-5 text-indigo-600 mr-2" />
+              <h4 className="font-semibold text-indigo-900">Breadth Score Interpretation</h4>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+              {/* Score Ranges */}
+              <div>
+                <div className="font-medium text-gray-800 mb-2">Score-Bereiche (0-100):</div>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center">
+                      <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                      <span>0-25: Stark Bearish</span>
+                    </span>
+                    <span className="text-xs text-gray-600">Starke Markt-Schwäche</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center">
+                      <div className="w-3 h-3 bg-orange-500 rounded-full mr-2"></div>
+                      <span>25-40: Bearish</span>
+                    </span>
+                    <span className="text-xs text-gray-600">Markt-Schwäche</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center">
+                      <div className="w-3 h-3 bg-gray-500 rounded-full mr-2"></div>
+                      <span>40-60: Neutral</span>
+                    </span>
+                    <span className="text-xs text-gray-600">Keine klare Richtung</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center">
+                      <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                      <span>60-75: Bullish</span>
+                    </span>
+                    <span className="text-xs text-gray-600">Markt-Stärke</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center">
+                      <div className="w-3 h-3 bg-emerald-600 rounded-full mr-2"></div>
+                      <span>75-100: Stark Bullish</span>
+                    </span>
+                    <span className="text-xs text-gray-600">Starke Markt-Stärke</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Current Score Interpretation */}
+              <div>
+                <div className="font-medium text-gray-800 mb-2">Dein aktueller Score ({formatScore(latestResult.normalizedScore)}):</div>
+                <div className="p-3 bg-white rounded border-2 border-dashed border-indigo-200">
+                  {latestResult.normalizedScore >= 75 ? (
+                    <div className="text-emerald-700">
+                      <div className="font-semibold flex items-center">
+                        <TrendingUp className="w-4 h-4 mr-1" />
+                        Stark Bullish
+                      </div>
+                      <div className="text-sm mt-1">
+                        Breite Markt-Beteiligung, gute Gelegenheit für Long-Positionen. 
+                        VIX und Breadth-Indikatoren unterstützen bullishe Strategie.
+                      </div>
+                    </div>
+                  ) : latestResult.normalizedScore >= 60 ? (
+                    <div className="text-green-700">
+                      <div className="font-semibold flex items-center">
+                        <TrendingUp className="w-4 h-4 mr-1" />
+                        Bullish
+                      </div>
+                      <div className="text-sm mt-1">
+                        Positive Markt-Breadth, moderate Long-Bias empfehlenswert. 
+                        Stockpicking-Gelegenheiten vorhanden.
+                      </div>
+                    </div>
+                  ) : latestResult.normalizedScore >= 40 ? (
+                    <div className="text-gray-700">
+                      <div className="font-semibold flex items-center">
+                        <BarChart3 className="w-4 h-4 mr-1" />
+                        Neutral
+                      </div>
+                      <div className="text-sm mt-1">
+                        Gemischte Signale, selektives Vorgehen. 
+                        Breadth zeigt keine klare Richtung - Vorsicht beim Trading.
+                      </div>
+                    </div>
+                  ) : latestResult.normalizedScore >= 25 ? (
+                    <div className="text-orange-700">
+                      <div className="font-semibold flex items-center">
+                        <TrendingUp className="w-4 h-4 mr-1 rotate-180" />
+                        Bearish
+                      </div>
+                      <div className="text-sm mt-1">
+                        Schwache Breadth, Long-Positionen reduzieren. 
+                        Defensive Strategie oder Short-Bias erwägen.
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-red-700">
+                      <div className="font-semibold flex items-center">
+                        <TrendingUp className="w-4 h-4 mr-1 rotate-180" />
+                        Stark Bearish
+                      </div>
+                      <div className="text-sm mt-1">
+                        Sehr schwache Markt-Breadth, Long-Positionen vermeiden. 
+                        Defensive oder Short-Strategie bevorzugen.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-blue-800 text-xs">
+              <strong>Hinweis:</strong> Der Breadth Score kombiniert VIX, T2108, Up/Down 4% Stocks und weitere Faktoren. 
+              Höhere Scores zeigen breitere Markt-Beteiligung und geringeres Risiko für Long-Positionen an.
             </div>
           </div>
         </div>

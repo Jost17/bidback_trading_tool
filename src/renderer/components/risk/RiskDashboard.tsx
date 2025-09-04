@@ -141,7 +141,7 @@ const RiskDashboard: React.FC<RiskDashboardProps> = ({ className = '' }) => {
                 </label>
                 <input
                   type="number"
-                  step="0.01"
+                  // Removed step constraint for flexible price input
                   value={riskCalc.entryPrice}
                   onChange={(e) => handleInputChange('entryPrice', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -154,7 +154,7 @@ const RiskDashboard: React.FC<RiskDashboardProps> = ({ className = '' }) => {
                 </label>
                 <input
                   type="number"
-                  step="1000"
+                  // Removed step constraint for flexible balance input
                   value={riskCalc.accountBalance}
                   onChange={(e) => handleInputChange('accountBalance', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -167,9 +167,7 @@ const RiskDashboard: React.FC<RiskDashboardProps> = ({ className = '' }) => {
                 </label>
                 <input
                   type="number"
-                  step="0.1"
-                  min="0.1"
-                  max="5"
+                  // Removed HTML5 validation constraints for flexible risk input
                   value={riskCalc.riskPercentage}
                   onChange={(e) => handleInputChange('riskPercentage', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"

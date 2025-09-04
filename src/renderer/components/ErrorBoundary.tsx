@@ -43,7 +43,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </h1>
               
               <p className="text-gray-600 mb-6">
-                The BIDBACK Trading Tool encountered an unexpected error. Please try restarting the application.
+                The Bidback Trading Tool encountered an unexpected error. Please try restarting the application.
               </p>
               
               <div className="space-y-4">
