@@ -19,14 +19,16 @@ export class SettingsAdapter {
       INSERT INTO portfolio_settings (
         portfolio_size, base_size_percentage, max_heat_percentage, max_positions,
         trading_setups, risk_per_trade, use_kelly_sizing, enable_position_scaling,
+        use_ib_account_size, ib_account_id, ib_sync_interval, ib_connection_status, ib_last_sync,
         last_updated, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
 
     this.updateSettingsStmt = db.prepare(`
       UPDATE portfolio_settings SET
         portfolio_size = ?, base_size_percentage = ?, max_heat_percentage = ?, max_positions = ?,
         trading_setups = ?, risk_per_trade = ?, use_kelly_sizing = ?, enable_position_scaling = ?,
+        use_ib_account_size = ?, ib_account_id = ?, ib_sync_interval = ?, ib_connection_status = ?, ib_last_sync = ?,
         last_updated = ?, updated_at = ?
       WHERE id = ?
     `)
@@ -64,6 +66,11 @@ export class SettingsAdapter {
         riskPerTrade: row.risk_per_trade,
         useKellySizing: Boolean(row.use_kelly_sizing),
         enablePositionScaling: Boolean(row.enable_position_scaling),
+        useIBAccountSize: Boolean(row.use_ib_account_size || false),
+        ibAccountId: row.ib_account_id || '',
+        ibSyncInterval: row.ib_sync_interval || 5,
+        ibConnectionStatus: row.ib_connection_status as any || 'disconnected',
+        ibLastSync: row.ib_last_sync || undefined,
         lastUpdated: row.last_updated,
         createdAt: row.created_at,
         updatedAt: row.updated_at
@@ -252,6 +259,11 @@ export class SettingsAdapter {
       riskPerTrade: 2,
       useKellySizing: false,
       enablePositionScaling: true,
+      useIBAccountSize: false,
+      ibAccountId: '',
+      ibSyncInterval: 5,
+      ibConnectionStatus: 'disconnected',
+      ibLastSync: undefined,
       lastUpdated: now
     }
   }

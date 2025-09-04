@@ -159,6 +159,14 @@ export interface PortfolioSettings {
   riskPerTrade: number
   useKellySizing: boolean
   enablePositionScaling: boolean
+  
+  // IB Integration Settings
+  useIBAccountSize: boolean
+  ibAccountId?: string
+  ibSyncInterval: number // minutes
+  ibConnectionStatus?: 'disconnected' | 'connecting' | 'connected' | 'error'
+  ibLastSync?: string
+  
   lastUpdated: string
   createdAt?: string
   updatedAt?: string

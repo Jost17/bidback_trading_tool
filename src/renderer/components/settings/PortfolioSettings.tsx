@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { Settings, DollarSign, Save, RefreshCcw, AlertCircle, CheckCircle, Info, Plus, Trash2, Loader } from 'lucide-react'
+import { Settings, DollarSign, Save, RefreshCcw, AlertCircle, CheckCircle, Info, Plus, Trash2, Loader, Wifi, WifiOff, Clock } from 'lucide-react'
 import { PortfolioSettings as GlobalPortfolioSettings, TradingSetup } from '../../../types/trading'
 import { usePortfolio } from '../../contexts/PortfolioContext'
 
@@ -48,17 +48,15 @@ export function PortfolioSettings({
     riskPerTrade: 2,
     useKellySizing: false,
     enablePositionScaling: true,
+    useIBAccountSize: false,
+    ibAccountId: '',
+    ibSyncInterval: 5,
+    ibConnectionStatus: 'disconnected' as const,
+    ibLastSync: undefined,
     lastUpdated: new Date().toISOString()
   }
   
-  // Update temp settings when initial settings change
-  useEffect(() => {
-    if (initialSettings) {
-      const newSettings = { ...settings, ...initialSettings }
-      setSettings(newSettings)
-      setTempSettings(newSettings)
-    }
-  }, [initialSettings])
+  // This effect is no longer needed since we use global settings
   
   // Calculate derived values
   const basePositionSize = (settings.portfolioSize * settings.baseSizePercentage) / 100
@@ -447,6 +445,130 @@ export function PortfolioSettings({
               
               <p className="mt-2 text-xs text-gray-500">
                 Manage your trading setups. Active setups will be available in the Position Calculator.
+              </p>
+            </div>
+            
+            {/* IB Integration Section */}
+            <div className="col-span-2 mt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <Wifi className="w-4 h-4 text-blue-600" />
+                  <label className="text-sm font-medium text-gray-700">
+                    Interactive Brokers Integration
+                  </label>
+                </div>
+                <div className={`flex items-center space-x-2 px-2 py-1 rounded-full text-xs font-medium ${
+                  settings.ibConnectionStatus === 'connected' ? 'bg-green-100 text-green-800' :
+                  settings.ibConnectionStatus === 'connecting' ? 'bg-yellow-100 text-yellow-800' :
+                  settings.ibConnectionStatus === 'error' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-600'
+                }`}>
+                  {settings.ibConnectionStatus === 'connected' ? <Wifi className="w-3 h-3" /> :
+                   settings.ibConnectionStatus === 'connecting' ? <Loader className="w-3 h-3 animate-spin" /> :
+                   <WifiOff className="w-3 h-3" />}
+                  <span className="capitalize">{settings.ibConnectionStatus || 'Disconnected'}</span>
+                </div>
+              </div>
+              
+              <div className="space-y-4 p-4 border border-gray-200 rounded-lg">
+                {/* Use IB Account Size Toggle */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-gray-900">Use IB Account Size</h4>
+                    <p className="text-sm text-gray-600">Automatically sync portfolio size from Interactive Brokers</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={tempSettings?.useIBAccountSize || false}
+                      onChange={(e) => {
+                        setTempSettings(prev => ({
+                          ...prev,
+                          useIBAccountSize: e.target.checked
+                        }))
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+
+                {/* IB Account ID */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      IB Account ID
+                    </label>
+                    <input
+                      type="text"
+                      value={tempSettings?.ibAccountId || ''}
+                      onChange={(e) => {
+                        setTempSettings(prev => ({
+                          ...prev,
+                          ibAccountId: e.target.value
+                        }))
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="DU123456"
+                      disabled={!tempSettings?.useIBAccountSize}
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Your Interactive Brokers account identifier
+                    </p>
+                  </div>
+
+                  {/* Sync Interval */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sync Interval (minutes)
+                    </label>
+                    <input
+                      type="number"
+                      value={tempSettings?.ibSyncInterval || 5}
+                      onChange={(e) => {
+                        setTempSettings(prev => ({
+                          ...prev,
+                          ibSyncInterval: parseInt(e.target.value) || 5
+                        }))
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      min="1"
+                      max="60"
+                      disabled={!tempSettings?.useIBAccountSize}
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      How often to sync account size from IB
+                    </p>
+                  </div>
+                </div>
+
+                {/* Last Sync Status */}
+                {settings.ibLastSync && (
+                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <Clock className="w-4 h-4" />
+                    <span>Last synced: {new Date(settings.ibLastSync).toLocaleString()}</span>
+                  </div>
+                )}
+
+                {/* Test Connection Button */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      // TODO: Implement IB connection test
+                      console.log('Testing IB connection...')
+                    }}
+                    disabled={!tempSettings?.useIBAccountSize || isSaving}
+                    className="px-4 py-2 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 disabled:opacity-50 transition-colors"
+                  >
+                    Test Connection
+                  </button>
+                </div>
+              </div>
+              
+              <p className="mt-2 text-xs text-gray-500">
+                When enabled, your portfolio size will be automatically updated from your IB account balance.
+                Manual portfolio size will be used as fallback if IB connection fails.
               </p>
             </div>
             

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Shield, DollarSign, TrendingUp, TrendingDown, AlertTriangle, Calculator } from 'lucide-react'
 import { useRiskManagement, usePositionManagement } from '../../hooks/usePythonBackend'
 import { LoadingSpinner } from '../ui/LoadingSpinner'
+import { usePortfolio } from '../../contexts/PortfolioContext'
 
 interface RiskDashboardProps {
   className?: string
@@ -17,17 +18,29 @@ interface RiskCalculation {
 const RiskDashboard: React.FC<RiskDashboardProps> = ({ className = '' }) => {
   const { calculateRisk } = useRiskManagement()
   const { positions, loading: positionsLoading } = usePositionManagement()
+  const { settings: portfolioSettings } = usePortfolio()
 
   const [riskCalc, setRiskCalc] = useState<RiskCalculation>({
     symbol: 'SPY',
     entryPrice: 450,
-    accountBalance: 100000,
-    riskPercentage: 1,
+    accountBalance: portfolioSettings?.portfolioSize || 100000,
+    riskPercentage: portfolioSettings?.riskPerTrade || 1,
   })
 
   const [riskParams, setRiskParams] = useState<any>(null)
   const [calculating, setCalculating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Update risk calculation when portfolio settings change
+  useEffect(() => {
+    if (portfolioSettings) {
+      setRiskCalc(prev => ({
+        ...prev,
+        accountBalance: portfolioSettings.portfolioSize,
+        riskPercentage: portfolioSettings.riskPerTrade || 1
+      }))
+    }
+  }, [portfolioSettings])
 
   // Calculate risk on form changes
   useEffect(() => {

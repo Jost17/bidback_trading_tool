@@ -1,5 +1,6 @@
 import React from 'react'
-import { Settings, Database, Download, Upload, Shield, Info } from 'lucide-react'
+import { Settings, Database, Download, Upload, Shield, Info, DollarSign } from 'lucide-react'
+import { PortfolioSettings } from './PortfolioSettings'
 
 export function SettingsPage() {
   return (
@@ -98,6 +99,18 @@ export function SettingsPage() {
             <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
               Save IB Settings
             </button>
+          </div>
+        </div>
+
+        {/* Portfolio & Account Settings */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center space-x-3 mb-4">
+            <DollarSign className="w-5 h-5 text-blue-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Portfolio & Account Settings</h2>
+          </div>
+          
+          <div className="space-y-4">
+            <PortfolioSettings />
           </div>
         </div>
 

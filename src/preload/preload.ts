@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { BreadthData, Trade, TradeFilters } from '../types/trading'
+import type { BreadthData, Trade, TradeFilters, PortfolioSettings } from '../types/trading'
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
@@ -36,6 +36,16 @@ contextBridge.exposeInMainWorld('tradingAPI', {
   
   getPerformanceStats: (startDate?: string, endDate?: string) => 
     ipcRenderer.invoke('trading:get-performance-stats', startDate, endDate),
+
+  // Portfolio Settings API
+  getPortfolioSettings: () => 
+    ipcRenderer.invoke('settings:get-portfolio-settings'),
+  
+  savePortfolioSettings: (settings: Omit<PortfolioSettings, 'id' | 'createdAt' | 'updatedAt'>) => 
+    ipcRenderer.invoke('settings:save-portfolio-settings', settings),
+  
+  resetPortfolioSettings: () => 
+    ipcRenderer.invoke('settings:reset-portfolio-settings'),
 
   // CSV Import/Export API
   importCSVBreadth: (csvData: string) => 

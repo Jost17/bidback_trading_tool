@@ -16,6 +16,7 @@ import { OpenPositions } from './OpenPositions'
 import { PortfolioSettings } from '../settings/PortfolioSettings'
 import { HolidayCalendar } from './HolidayCalendar'
 import { TradeEntryForm } from './TradeEntryForm'
+import { usePortfolio } from '../../contexts/PortfolioContext'
 
 interface TradingDashboardProps {
   onNavigateHome?: () => void
@@ -42,6 +43,9 @@ interface TradingStats {
 }
 
 export function TradingDashboard({ onNavigateHome }: TradingDashboardProps) {
+  // Use global portfolio context
+  const { settings: globalPortfolioSettings, isLoading: portfolioLoading } = usePortfolio()
+  
   const [activeView, setActiveView] = useState<ActiveView>('dashboard')
   const [stats, setStats] = useState<TradingStats>({
     plannedTrades: 2,
@@ -51,14 +55,20 @@ export function TradingDashboard({ onNavigateHome }: TradingDashboardProps) {
     todaysPL: 234.50,
     portfolioHeat: 23.5
   })
-  const [portfolioSettings, setPortfolioSettings] = useState({
+  const [isLoading, setIsLoading] = useState(false)
+  
+  // Use global portfolio settings with fallback
+  const portfolioSettings = globalPortfolioSettings || {
     portfolioSize: 100000,
     baseSizePercentage: 10,
     maxHeatPercentage: 80,
     maxPositions: 8,
+    tradingSetups: [],
+    riskPerTrade: 2,
+    useKellySizing: false,
+    enablePositionScaling: true,
     lastUpdated: new Date().toISOString()
-  })
-  const [isLoading, setIsLoading] = useState(false)
+  }
   
   useEffect(() => {
     // Load dashboard data on mount
@@ -82,11 +92,7 @@ export function TradingDashboard({ onNavigateHome }: TradingDashboardProps) {
     }, 500)
   }, [])
   
-  const handlePortfolioSettingsChange = useCallback((newSettings: typeof portfolioSettings) => {
-    setPortfolioSettings(newSettings)
-    // In real implementation, save to backend
-    console.log('Portfolio settings updated:', newSettings)
-  }, [])
+  // Portfolio settings are now handled globally via PortfolioContext
   
   const handleTradeExecuted = useCallback((tradeId: number) => {
     // Refresh stats when trade is executed
@@ -120,10 +126,7 @@ export function TradingDashboard({ onNavigateHome }: TradingDashboardProps) {
         )
       case 'settings':
         return (
-          <PortfolioSettings 
-            initialSettings={portfolioSettings}
-            onSettingsChange={handlePortfolioSettingsChange}
-          />
+          <PortfolioSettings />
         )
       case 'calendar':
         return (
